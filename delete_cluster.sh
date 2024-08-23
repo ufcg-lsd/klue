@@ -57,7 +57,7 @@ remove_tags() {
 
 # Get the security group ID associated with the cluster
 echo "Retrieving Security Group associated with the cluster..."
-SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:aws:eks:cluster-name,Values=$CLUSTER_NAME" --query "SecurityGroups[*].GroupId" --output text)
+SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:aws:eks:cluster-name,Values=$CLUSTER_NAME" --query "SecurityGroups[*].GroupId" --output text) || true
 
 if [ -n "$SECURITY_GROUP_ID" ]; then
     echo "Removing tags from Security Group $SECURITY_GROUP_ID"
@@ -68,7 +68,7 @@ fi
 
 # Get the subnet IDs associated with the cluster
 echo "Retrieving Subnets associated with the cluster..."
-SUBNET_IDS=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.resourcesVpcConfig.subnetIds" --output text)
+SUBNET_IDS=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.resourcesVpcConfig.subnetIds" --output text)  || true
 
 if [ -n "$SUBNET_IDS" ]; then
     echo "Removing tags from Subnets $SUBNET_IDS"
@@ -77,8 +77,26 @@ else
     echo "No Subnets found for cluster $CLUSTER_NAME."
 fi
 
-# Drain nodes and handle unevictable pods
-drain_nodes
+# Function to delete the SQS queue by name
+echo "Deleting SQS queue named $QUEUE_NAME..."
+QUEUE_URL=$(aws sqs list-queues --queue-name-prefix "$QUEUE_NAME" --region "$REGION" --output text | grep "$QUEUE_NAME") || true
+
+if [ -n "$QUEUE_URL" ]; then
+    aws sqs delete-queue --queue-url "$QUEUE_NAME" --region "$REGION"
+    echo "Queue $QUEUE_NAME deleted successfully."
+else
+    echo "Queue $QUEUE_NAME not found or already deleted."
+fi
+
+# Uninstall Calico
+echo "Uninstalling Calico..."
+kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml || true
+kubectl delete namespace $CALICO_NAMESPACE || true
+
+# Uninstall Karpenter
+echo "Uninstalling Karpenter..."
+helm uninstall karpenter --namespace $KARPENTER_NAMESPACE || true
+kubectl delete namespace $KARPENTER_NAMESPACE || true
 
 # Delete the EKS cluster using eksctl                                                                                                                                    
 echo "Deleting EKS cluster: $CLUSTER_NAME in region: $REGION"                                                                                                            

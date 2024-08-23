@@ -25,6 +25,14 @@ You can run the script to create your cluster using
 ./create_cluster.sh
 ```
 ## How to Delete a Cluster Automatically
+To delete your cluster, add the permission to execute the script
+```
+chmod +x create_cluster.sh
+```
+So, you can just run the following command
+```
+./delete_cluster.sh
+```
 
 ## Extra Links
-Karpenter NodePool and NodeClass examples can be checked in this [link](https://github.com/aws/karpenter-provider-aws/tree/v0.37.1/examples/v1beta1)
+Karpenter NodePool and NodeClass niceconfiguration examples to experiments can be checked in this [link](https://github.com/aws/karpenter-provider-aws/tree/v0.37.1/examples/v1beta1)
