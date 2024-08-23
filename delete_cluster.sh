@@ -90,6 +90,7 @@ fi
 
 # Uninstall Calico
 echo "Uninstalling Calico..."
+kubectl delete installation calico
 kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml || true
 kubectl delete namespace $CALICO_NAMESPACE || true
 

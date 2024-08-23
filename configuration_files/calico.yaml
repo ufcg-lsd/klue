@@ -1,7 +1,7 @@
 kind: Installation
 apiVersion: operator.tigera.io/v1
 metadata:
-  name: default
+  name: calico
 spec:
   kubernetesProvider: EKS
   cni:
