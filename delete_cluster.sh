@@ -90,18 +90,17 @@ fi
 
 # Uninstall Calico
 echo "Uninstalling Calico..."
-kubectl delete installation calico
-kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml || true
-kubectl delete namespace $CALICO_NAMESPACE || true
+kubectl delete -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml --timeout=60s || true
+kubectl delete namespace $CALICO_NAMESPACE --timeout=60s || true
 
 # Uninstall Karpenter
 echo "Uninstalling Karpenter..."
-helm uninstall karpenter --namespace $KARPENTER_NAMESPACE || true
-kubectl delete namespace $KARPENTER_NAMESPACE || true
+helm uninstall karpenter --namespace $KARPENTER_NAMESPACE --timeout=60s || true
+kubectl delete namespace $KARPENTER_NAMESPACE --timeout=60s || true
 
 # Delete the EKS cluster using eksctl                                                                                                                                    
 echo "Deleting EKS cluster: $CLUSTER_NAME in region: $REGION"                                                                                                            
-eksctl delete cluster --name $CLUSTER_NAME --region $REGION || echo "Failed to delete cluster using eksctl, trying CloudFormation deletion."                             
+eksctl delete cluster --name $CLUSTER_NAME --region $REGION --disable-nodegroup-eviction || echo "Failed to delete cluster using eksctl, trying CloudFormation deletion."                             
                                                                                                                                                                          
 # Delete the CloudFormation stack if it still exists                                                                                                                     
 STACK_NAME="eksctl-${CLUSTER_NAME}-cluster"                                                                                                                              

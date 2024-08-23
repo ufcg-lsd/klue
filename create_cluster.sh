@@ -55,10 +55,10 @@ kubectl get svc
 
 # Create the first cluster node to run karpenter
 echo "Creating the first cluster nodegroup..."
-eksctl create nodegroup -f $NODEGROUP_CONFIG_FILE
+eksctl create nodegroup -f $NODEGROUP_CONFIG_FILE || true
 
 # List all queues and search for the specific queue by name
-QUEUE_URL=$(aws sqs list-queues --region "$REGION" --profile "$AWS_PROFILE" | grep "$QUEUE_NAME")
+QUEUE_URL=$(aws sqs list-queues --region "$REGION" --profile "$AWS_PROFILE" | grep "$QUEUE_NAME") || true
 
 # Check if QUEUE_URL is empty or not
 if [ -n "$QUEUE_URL" ]; then
@@ -90,17 +90,17 @@ helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
 
 # Verify Karpenter installation
 echo "Verifying Karpenter installation..."
-kubectl get pods -n $KARPENTER_NAMESPACE
+kubectl get pods -n $KARPENTER_NAMESPACE || true
 echo "Karpenter installation completed successfully!"
 
 # Tag the Security Group associated with the EKS cluster
 echo "Tagging security group"
-SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:aws:eks:cluster-name,Values=$CLUSTER_NAME" --query "SecurityGroups[0].GroupId" --output text)
+SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:aws:eks:cluster-name,Values=$CLUSTER_NAME" --query "SecurityGroups[0].GroupId" --output text) || true
 aws ec2 create-tags --resources "$SECURITY_GROUP_ID" --tags Key=karpenter.sh/discovery,Value=$CLUSTER_NAME
 
 # Tag the subnets associated with the EKS cluster
 echo "Tagging subnets"
-SUBNET_IDS=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.subnetIds" --output text)
+SUBNET_IDS=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.subnetIds" --output text) || true
 
 for SUBNET_ID in $SUBNET_IDS; do
     echo "Tagging subnet $SUBNET_ID with karpenter.sg=$CLUSTER_NAME"
