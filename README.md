@@ -1,8 +1,8 @@
-# Welcome to the automatic Calico and Karpenter installation into a cluster EKS
+# Welcome to the automatic Calico and Karpenter installation into an cluster EKS
 
 ## How to Create a Cluster Automatically
 ### Install Dependencies
-To create your cluster with the Calico and Karpenter configured, you need to install some dependencies in your machine.
+To create your cluster with the Calico and Karpenter configured, you need to install some dependencies on your machine.
 
 1. Install the EKSCTL following this [tutorial](https://eksctl.io/installation/)
 2. Install the KUBECTL following this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
@@ -11,11 +11,10 @@ To create your cluster with the Calico and Karpenter configured, you need to ins
 5. Set your aws sso configurations following this [tutorial](https://www.notion.so/vtexhandbook/Configure-AWS-SSO-02f86cdbbf4c4e50bbd2c251e4912c79)
 
 ### Prepare the enviroment
-When you have this dependencies installed, you need to copy the `env.example` file to your `.env` using
-```
+Once you have these dependencies installed, you need to copy the `env.example` file to your `.env` using
 cp .env.example .env
 ```
-Add the permission to execute the script
+Add permission to execute the script
 ```
 chmod +x create_cluster.sh
 ```
@@ -29,7 +28,7 @@ To delete your cluster, add the permission to execute the script
 ```
 chmod +x create_cluster.sh
 ```
-So, you can just run the following command
+Then, you can run the following command
 ```
 ./delete_cluster.sh
 ```
