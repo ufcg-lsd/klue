@@ -7,10 +7,10 @@ spec:
   instanceProfile: "eks-loadtest"
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: iam-eks-cluster
+        karpenter.sh/discovery: ${CLUSTER_NAME}
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: iam-eks-cluster
+        karpenter.sh/discovery: ${CLUSTER_NAME}
   tags:
     app.kubernetes.io/created-by: eks-workshop
   userData: |

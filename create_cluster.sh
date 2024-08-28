@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Load env variables
+set -a
 source .env
+set +a
 
 # Exit immediately if a command exits with a non-zero status
 set -e
@@ -43,7 +45,7 @@ fi
 
 # Create the EKS cluster from the file cluster-config.yaml
 echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
-eksctl create cluster -f $CLUSTER_CONFIG_FILE
+envsubst < $CLUSTER_CONFIG_FILE | eksctl create cluster -f -
 
 # Update kubeconfig
 echo "Updating kubeconfig for the cluster..."
@@ -55,7 +57,7 @@ kubectl get svc
 
 # Create the first cluster node to run karpenter
 echo "Creating the first cluster nodegroup..."
-eksctl create nodegroup -f $NODEGROUP_CONFIG_FILE || true
+envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
 
 # List all queues and search for the specific queue by name
 QUEUE_URL=$(aws sqs list-queues --region "$REGION" --profile "$AWS_PROFILE" | grep "$QUEUE_NAME") || true
@@ -108,24 +110,24 @@ for SUBNET_ID in $SUBNET_IDS; do
 done
 
 # Apply the NodeClass and NodePool configurations for Karpenter
-echo "Applying nodeclass"
-kubectl apply -f $NODECLASS_CONFIG_FILE
+# echo "Applying nodeclass"
+# envsubst < $NODECLASS_CONFIG_FILE | kubectl apply -f - || true
 
-echo "Applying nodepool"
-kubectl apply -f $NODEPOOL_CONFIG_FILE
+# echo "Applying nodepool"
+# envsubst < $NODEPOOL_CONFIG_FILE | kubectl apply -f - || true
 
 # List the EC2 NodeClasses and NodePools to verify their creation
-kubectl get ec2nodeclass
-kubectl get nodepool
+# kubectl get ec2nodeclass
+# kubectl get nodepool
 
 # Delete the existing aws-node DaemonSet, which is replaced by Calico
-echo "Deleting the aws-node daemonset"
-kubectl delete daemonset -n kube-system aws-node
+# echo "Deleting the aws-node daemonset"
+# kubectl delete daemonset -n kube-system aws-node
 
 # Install Calico CRDs
-echo "Installing Calico CRD's"
-kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+# echo "Installing Calico CRD's"
+# kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
 
 # Install Calico and apply the installation yaml
-echo "Applying calico instalation into the cluster"
-kubectl create -f $CALICO_CONFIG_FILE
+# echo "Applying calico instalation into the cluster"
+# kubectl create -f $CALICO_CONFIG_FILE
