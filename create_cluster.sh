@@ -110,24 +110,24 @@ for SUBNET_ID in $SUBNET_IDS; do
 done
 
 # Apply the NodeClass and NodePool configurations for Karpenter
-# echo "Applying nodeclass"
-# envsubst < $NODECLASS_CONFIG_FILE | kubectl apply -f - || true
+echo "Applying nodeclass"
+envsubst < $NODECLASS_CONFIG_FILE | kubectl apply -f - || true
 
-# echo "Applying nodepool"
-# envsubst < $NODEPOOL_CONFIG_FILE | kubectl apply -f - || true
+echo "Applying nodepool"
+envsubst < $NODEPOOL_CONFIG_FILE | kubectl apply -f - || true
 
 # List the EC2 NodeClasses and NodePools to verify their creation
-# kubectl get ec2nodeclass
-# kubectl get nodepool
+kubectl get ec2nodeclass
+kubectl get nodepool
 
 # Delete the existing aws-node DaemonSet, which is replaced by Calico
-# echo "Deleting the aws-node daemonset"
-# kubectl delete daemonset -n kube-system aws-node
+echo "Deleting the aws-node daemonset"
+kubectl delete daemonset -n kube-system aws-node
 
 # Install Calico CRDs
-# echo "Installing Calico CRD's"
-# kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+echo "Installing Calico CRD's"
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
 
 # Install Calico and apply the installation yaml
-# echo "Applying calico instalation into the cluster"
-# kubectl create -f $CALICO_CONFIG_FILE
+echo "Applying calico instalation into the cluster"
+kubectl create -f $CALICO_CONFIG_FILE
