@@ -53,4 +53,5 @@ Then, you can run the following command
 
 ## Extra Links
 Karpenter NodePool and NodeClass nice configuration examples to experiments can be checked in this [link](https://github.com/aws/karpenter-provider-aws/tree/v0.37.1/examples/v1beta1).
+
 To check if the Calico Policies is working correctly in your cluster follow this [link](https://docs.tigera.io/calico/latest/network-policy/get-started/calico-policy/calico-policy-tutorial).
