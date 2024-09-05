@@ -98,6 +98,16 @@ echo "Uninstalling Karpenter..."
 helm uninstall karpenter --namespace $KARPENTER_NAMESPACE --timeout=60s || true
 kubectl delete namespace $KARPENTER_NAMESPACE --timeout=60s || true
 
+# List all nodes running on this cluster
+nodes=$(kubectl get nodes -o name)
+
+# Delete all nodes in the list of nodes
+for node in $nodes; do
+    echo "Deleting node $node"
+    kubectl delete $node
+done
+
+
 # Delete the EKS cluster using eksctl                                                                                                                                    
 echo "Deleting EKS cluster: $CLUSTER_NAME in region: $REGION"                                                                                                            
 eksctl delete cluster --name $CLUSTER_NAME --region $REGION --disable-nodegroup-eviction || echo "Failed to delete cluster using eksctl, trying CloudFormation deletion."                             

@@ -55,6 +55,18 @@ aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION --profile $AWS_P
 echo "Verifying the cluster status..."
 kubectl get svc
 
+# Delete the existing aws-node DaemonSet, which is replaced by Calico
+echo "Deleting the aws-node daemonset"
+kubectl delete daemonset -n kube-system aws-node
+
+# Install Calico CRDs
+echo "Installing Calico CRD's"
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+
+# Install Calico and apply the installation yaml
+echo "Applying calico instalation into the cluster"
+envsubst < $CALICO_CONFIG_FILE | eksctl create -f -
+
 # Create the first cluster node to run karpenter
 echo "Creating the first cluster nodegroup..."
 envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
@@ -119,15 +131,3 @@ envsubst < $NODEPOOL_CONFIG_FILE | kubectl apply -f - || true
 # List the EC2 NodeClasses and NodePools to verify their creation
 kubectl get ec2nodeclass
 kubectl get nodepool
-
-# Delete the existing aws-node DaemonSet, which is replaced by Calico
-echo "Deleting the aws-node daemonset"
-kubectl delete daemonset -n kube-system aws-node
-
-# Install Calico CRDs
-echo "Installing Calico CRD's"
-kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
-
-# Install Calico and apply the installation yaml
-echo "Applying calico instalation into the cluster"
-kubectl create -f $CALICO_CONFIG_FILE

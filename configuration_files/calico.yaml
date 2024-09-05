@@ -5,6 +5,6 @@ metadata:
 spec:
   kubernetesProvider: EKS
   cni:
-    type: AmazonVPC
+    type: ${CLUSTER_CNI}
   calicoNetwork:
     bgp: Disabled
