@@ -65,7 +65,7 @@ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1
 
 # Install Calico and apply the installation yaml
 echo "Applying calico instalation into the cluster"
-envsubst < $CALICO_CONFIG_FILE | eksctl create -f -
+envsubst < $CALICO_CONFIG_FILE | kubectl create -f -
 
 # Create the first cluster node to run karpenter
 echo "Creating the first cluster nodegroup..."

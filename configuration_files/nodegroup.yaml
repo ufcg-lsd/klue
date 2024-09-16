@@ -14,3 +14,8 @@ nodeGroups:
     iam:
       instanceRoleARN: arn:aws:iam::463020534911:role/eks-loadtest
       instanceProfileARN: arn:aws:iam::463020534911:instance-profile/eks-loadtest
+    tags:
+      Environment: ${ENVIRONMENT}
+      Name: ${CLUSTER_NAME}
+      Product: ${PRODUCT}
+      ApplicationName: ${APPLICATION_NAME}
