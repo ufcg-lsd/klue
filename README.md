@@ -20,6 +20,9 @@ We are providing you a short tutorial about the ENV variables:
 
 - **CLUSTER_NAME**: The name of your cluster.
 - **REGION**: AWS Region name
+- **ENVIRONMENT**: the environment is a tag that will be used in your ASG
+- **PRODUCT**: Product Tag
+- **APPLICATION_NAME**: required tag to create the ASG
 - **AWS_PROFILE**: AWS SSO profile name
 - **CLUSTER_CONFIG_FILE**: The path of the cluster configuration file
 - **NODEGROUP_CONFIG_FILE**: The path of the nodegroup configuration file
