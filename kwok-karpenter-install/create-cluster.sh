@@ -43,38 +43,39 @@ if ! command_exists helm; then
     exit 1
 fi
 
-# # Create the EKS cluster from the file cluster-config.yaml
-# echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
-# envsubst < $CLUSTER_CONFIG_FILE | eksctl create cluster -f -
+# Create the EKS cluster from the file cluster-config.yaml
+echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
+envsubst < $CLUSTER_CONFIG_FILE | eksctl create cluster -f -
 
-# # Update kubeconfig
-# echo "Updating kubeconfig for the cluster..."
-# aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION --profile $AWS_PROFILE
+# Update kubeconfig
+echo "Updating kubeconfig for the cluster..."
+aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION --profile $AWS_PROFILE
 
-# # Verify cluster is up and running
-# echo "Verifying the cluster status..."
-# kubectl get svc
+# Verify cluster is up and running
+echo "Verifying the cluster status..."
+kubectl get svc
 
-# # Create the first cluster node to run karpenter
-# echo "Creating the first cluster nodegroup..."
-# envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
+# Create the first cluster node to run karpenter
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+echo "Creating the first cluster nodegroup for user $USERNAME..."
+envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
 
-# # List all queues and search for the specific queue by name
-# QUEUE_URL=$(aws sqs list-queues --region "$REGION" --profile "$AWS_PROFILE" | grep "$QUEUE_NAME") || true
+# List all queues and search for the specific queue by name
+QUEUE_URL=$(aws sqs list-queues --region "$REGION" --profile "$AWS_PROFILE" | grep "$QUEUE_NAME") || true
 
-# # Check if QUEUE_URL is empty or not
-# if [ -n "$QUEUE_URL" ]; then
-#     echo "Queue '$QUEUE_NAME' already exists. URL: $QUEUE_URL"
-# else
-#     echo "Queue '$QUEUE_NAME' does not exist. Creating it now..."
-#     QUEUE_URL=$(aws sqs create-queue --queue-name "$QUEUE_NAME" --region "$REGION" --profile "$AWS_PROFILE" --query 'QueueUrl' --output text)
-#     if [ $? -eq 0 ]; then
-#         echo "Queue '$QUEUE_NAME' created successfully. URL: $QUEUE_URL"
-#     else
-#         echo "Failed to create queue '$QUEUE_NAME'."
-#         exit 1
-#     fi
-# fi
+# Check if QUEUE_URL is empty or not
+if [ -n "$QUEUE_URL" ]; then
+    echo "Queue '$QUEUE_NAME' already exists. URL: $QUEUE_URL"
+else
+    echo "Queue '$QUEUE_NAME' does not exist. Creating it now..."
+    QUEUE_URL=$(aws sqs create-queue --queue-name "$QUEUE_NAME" --region "$REGION" --profile "$AWS_PROFILE" --query 'QueueUrl' --output text)
+    if [ $? -eq 0 ]; then
+        echo "Queue '$QUEUE_NAME' created successfully. URL: $QUEUE_URL"
+    else
+        echo "Failed to create queue '$QUEUE_NAME'."
+        exit 1
+    fi
+fi
 
 cd karpenter-files
 

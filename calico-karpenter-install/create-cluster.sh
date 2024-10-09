@@ -43,6 +43,10 @@ if ! command_exists helm; then
     exit 1
 fi
 
+# Get and export the USERNAME of the user executing this script
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+export USERNAME
+
 # Create the EKS cluster from the file cluster-config.yaml
 echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
 envsubst < $CLUSTER_CONFIG_FILE | eksctl create cluster -f -
@@ -68,7 +72,7 @@ echo "Applying calico instalation into the cluster"
 envsubst < $CALICO_CONFIG_FILE | kubectl create -f -
 
 # Create the first cluster node to run karpenter
-echo "Creating the first cluster nodegroup..."
+echo "Creating the first cluster nodegroup for user $USERNAME..."
 envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
 
 # List all queues and search for the specific queue by name
