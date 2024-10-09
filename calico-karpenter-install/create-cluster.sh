@@ -2,7 +2,7 @@
 
 # Load env variables
 set -a
-source .env
+source ../.env
 set +a
 
 # Exit immediately if a command exits with a non-zero status
