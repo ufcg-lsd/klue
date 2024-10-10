@@ -43,6 +43,10 @@ if ! command_exists helm; then
     exit 1
 fi
 
+# Get and export the USERNAME of the user executing this script
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+export USERNAME
+
 # Create the EKS cluster from the file cluster-config.yaml
 echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
 envsubst < $CLUSTER_CONFIG_FILE | eksctl create cluster -f -
@@ -56,7 +60,6 @@ echo "Verifying the cluster status..."
 kubectl get svc
 
 # Create the first cluster node to run karpenter
-USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
 echo "Creating the first cluster nodegroup for user $USERNAME..."
 envsubst < $NODEGROUP_CONFIG_FILE | eksctl create nodegroup -f - || true
 
@@ -77,7 +80,7 @@ else
     fi
 fi
 
-cd karpenter-files
+cd karpenter-code
 
 make toolchain
 make build
