@@ -1,4 +1,4 @@
-# Welcome to the VtexLab tool to configure and test Calico and Karpenter installation into an cluster EKS
+# Welcome to the VtexLab tool to configure and test Calico and Karpenter installation into a cluster EKS
 This tools aims to assist in the installation and configuration of **EKS clusters** with **Calico** and **Karpenter**. Additionally, it provides a cost-effective way for developers to test changes in Karpenter's code without incurring unnecessary expenses.
 
 ## Setting up your cluster environment
