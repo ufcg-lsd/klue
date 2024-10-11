@@ -1,0 +1,12 @@
+# Allow agress trafic from busybox
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-busybox-egress
+  namespace: advanced-policy-demo
+spec:
+  selector: run == 'access'
+  types:
+  - Egress
+  egress:
+  - action: Allow
