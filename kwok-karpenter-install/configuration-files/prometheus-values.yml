@@ -1,0 +1,4 @@
+prometheus:
+  prometheusSpec:
+    version: "v2.54.0"
+
