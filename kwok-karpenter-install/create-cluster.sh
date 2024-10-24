@@ -102,7 +102,7 @@ make apply
 
 kubectl get po -A
 
-kubectl apply -f configuration-files/nodepool.yaml
+kubectl apply -f ../configuration-files/nodepool.yaml
 
-kubectl apply -f configuration-files/karpenter-servicemonitor.yml
-kubectl apply -f configuration-files/prometheus-obj.yaml
+kubectl apply -f ../configuration-files/karpenter-servicemonitor.yml
+kubectl apply -f ../configuration-files/prometheus-obj.yaml
