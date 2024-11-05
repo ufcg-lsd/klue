@@ -10,7 +10,7 @@ nodeGroups:
     labels: { role: workers }
     instanceType: t2.xlarge
     desiredCapacity: 1
-    privateNetworking: true  
+    privateNetworking: true
     iam:
       instanceRoleARN: arn:aws:iam::463020534911:role/eks-loadtest
       instanceProfileARN: arn:aws:iam::463020534911:instance-profile/eks-loadtest
