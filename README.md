@@ -1,6 +1,9 @@
-# Welcome to the automatic Calico and Karpenter installation into an cluster EKS
+# Welcome to the VtexLab tool to configure and test Calico and Karpenter installation into a cluster EKS
+This tools aims to assist in the installation and configuration of **EKS clusters** with **Calico** and **Karpenter**. Additionally, it provides a cost-effective way for developers to test changes in Karpenter's code without incurring unnecessary expenses.
 
-## How to Create a Cluster Automatically
+## Setting up your cluster environment
+Before starting to work with your cluster or testing code changes, follow these steps to properly set up your environment.
+
 ### Install Dependencies
 To create your cluster with the Calico and Karpenter configured, you need to install some dependencies on your machine.
 
@@ -9,12 +12,6 @@ To create your cluster with the Calico and Karpenter configured, you need to ins
 3. Install the AWS CLI following this [tutorial](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 4. Install the HELM package manager for K8S following this [tutorial](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 5. Set your aws sso configurations following this [tutorial](https://www.notion.so/vtexhandbook/Configure-AWS-SSO-02f86cdbbf4c4e50bbd2c251e4912c79)
-
-### Setup enviroment
-Once you have these dependencies installed, you need to copy the `env.example` file to your `.env` using
-```
-cp .env.example .env
-```
 
 We are providing you a short tutorial about the ENV variables:
 
@@ -35,6 +32,17 @@ We are providing you a short tutorial about the ENV variables:
 - **KARPENTER_NAMESPACE**: The namespace to install Karpenter
 - **CALICO_NAMESPACE**: The namespace to install Calico
 
+Once you have these dependencies installed, you need to copy the `env.example` file to your `.env` using
+```
+cp .env.example .env
+```
+
+**(optional)** if you want to test the karpenter code, init the submodule repositories `gotrace` and `karpenter-code` using
+```
+git submodule update --init --recursive
+```
+
+## How to Create a Cluster With Calico and Karpenter Automatically
 Add permission to execute the script
 ```
 chmod +x create_cluster.sh

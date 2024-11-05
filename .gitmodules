@@ -1,0 +1,3 @@
+[submodule "kwok-karpenter-install/karpenter-code"]
+	path = kwok-karpenter-install/karpenter-code
+	url = git@github.com:vtex-lab/karpenter-code.git
