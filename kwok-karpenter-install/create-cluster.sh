@@ -2,7 +2,7 @@
 
 # Load env variables
 set -a
-source .env
+source ../.env
 set +a
 
 # Exit immediately if a command exits with a non-zero status
@@ -42,6 +42,10 @@ if ! command_exists helm; then
     echo "helm not found. Please install it and try again."
     exit 1
 fi
+
+# Get and export the USERNAME of the user executing this script
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+export USERNAME
 
 # Create the EKS cluster from the file cluster-config.yaml
 echo "Creating EKS cluster: $CLUSTER_NAME in region: $REGION"
@@ -101,8 +105,6 @@ make install-kwok
 make apply
 
 kubectl get po -A
-
-kubectl apply -f ../configuration-files/nodepool.yaml
 
 kubectl apply -f ../configuration-files/karpenter-servicemonitor.yml
 kubectl apply -f ../configuration-files/prometheus-obj.yaml
