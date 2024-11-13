@@ -1,0 +1,7 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelector: {}
+    podMonitorSelector: {}
+    # If you want to disable Namespace selectors as well:
+    serviceMonitorNamespaceSelector: {}
+    podMonitorNamespaceSelector: {}

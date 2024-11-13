@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Load env variables
 set -a
 source ../.env
@@ -82,16 +81,18 @@ fi
 
 # Setup Prometheus and Grafana
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-
 kubectl create namespace monitoring
 
-helm install my-prometheus prometheus-community/kube-prometheus-stack -n monitoring -f configuration-files/prometheus-values.yml
+kubectl apply --server-side -f kube-prometheus/manifests/setup
+kubectl wait \
+	--for condition=Established \
+	--all CustomResourceDefinition \
+	--namespace=monitoring
+kubectl apply -f kube-prometheus/manifests/
 
 # ID 6417
 # Access Prometheus
-# kubectl port-forward --address 0.0.0.0 pod/prometheus-my-prometheus-kube-prometh-prometheus-0  30222:9090 -n monitoring &
+ kubectl port-forward --address 0.0.0.0 pod/prometheus-k8s-0  30222:9090 -n monitoring &
 # Access Grafana
 # kubectl port-forward --address 0.0.0.0 pod/my-prometheus-grafana-{hash}  3000:3000 -n monitoring &
 # kubectl get secret my-prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode; echo
@@ -106,4 +107,3 @@ make apply
 kubectl get po -A
 
 kubectl apply -f ../configuration-files/karpenter-servicemonitor.yml
-kubectl apply -f ../configuration-files/prometheus-obj.yaml

@@ -6,7 +6,7 @@ metadata:
   region: us-east-1
 
 nodeGroups:
-  - name: ng-1-workers
+  - name: ng-2-workers
     labels: { role: workers }
     instanceType: t2.xlarge
     desiredCapacity: 1
