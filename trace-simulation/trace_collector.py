@@ -37,6 +37,7 @@ def request_metrics(metric, duration):
 
 def write_csv(dir, metrics):
     duration = get_last_run_duration()
+    update_last_run_timestamp()
 
     for metric in metrics:
         response = request_metrics(metric, duration)
@@ -71,7 +72,6 @@ def write_csv(dir, metrics):
                         row.append(x)
                     writer.writerow(row)
 
-    update_last_run_timestamp()
 
 def write_json(f, metrics):
     results = []
