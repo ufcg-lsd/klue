@@ -73,24 +73,6 @@ def write_csv(dir, metrics):
                     writer.writerow(row)
 
 
-def write_json(f, metrics):
-    results = []
-    for metric in metrics:
-        response = request_metrics(metric, timedelta(seconds=30))
-
-        # Check if the response contains "data" and "result"
-        try:
-            metric_results = response.json().get("data", {}).get("result", [])
-            if metric_results:
-                results.append(metric_results)
-            else:
-                print(f"No results for metric {metric}")
-        except json.JSONDecodeError:
-            print(f"Failed to decode JSON for metric {metric}")
-            continue
-
-    json.dump(results, f, indent=4)
-
 def main():
     while True:
         time.sleep(3600)
