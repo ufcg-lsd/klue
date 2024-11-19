@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Função para exibir a ajuda
+usage() {
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster]"
+    echo ""
+    echo "Opções:"
+    echo "  --dev                 Criar ambiente de desenvolvimento"
+    echo "  --sim                 Criar ambiente de simulação"
+    echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
+    echo "  --new-cluster         Criar um novo cluster"
+    echo "  -h, --help            Exibir esta mensagem de ajuda"
+    exit 1
+}
+
+# Função para criar um cluster novo
+create_new_cluster() {
+    echo "Criando cluster novo..."
+    cd kwok-karpenter-install
+    ./create-cluster.sh
+    cd ..
+}
+
+# Função para configurar um cluster existente
+use_existing_cluster() {
+    local context=$1
+    echo "Usando o cluster existente: $context"
+    kubectl config use-context "$context"
+}
+
+# Parsing das flags
+ENVIRONMENT=""
+CLUSTER_ACTION=""
+CLUSTER_CONTEXT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dev)
+            ENVIRONMENT="development"
+            shift
+            ;;
+        --sim)
+            ENVIRONMENT="simulation"
+            shift
+            ;;
+        --use-cluster)
+            CLUSTER_ACTION="use"
+            CLUSTER_CONTEXT="$2"
+            shift 2
+            ;;
+        --new-cluster)
+            CLUSTER_ACTION="new"
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "Opção inválida: $1"
+            usage
+            ;;
+    esac
+done
+
+# Validação das flags
+if [[ -z $ENVIRONMENT ]]; then
+    echo "Erro: É necessário especificar --dev ou --sim."
+    usage
+fi
+
+if [[ $CLUSTER_ACTION == "use" && -z $CLUSTER_CONTEXT ]]; then
+    echo "Erro: O nome do contexto é necessário ao usar --use-cluster."
+    usage
+fi
+
+# Execução das ações
+if [[ $CLUSTER_ACTION == "new" ]]; then
+    create_new_cluster
+elif [[ $CLUSTER_ACTION == "use" ]]; then
+    use_existing_cluster "$CLUSTER_CONTEXT"
+else
+    echo "Nenhuma ação de cluster especificada. Criando um novo cluster por padrão."
+    create_new_cluster
+fi
+
+# Configuração do ambiente
+if [[ $ENVIRONMENT == "development" ]]; then
+    echo "Configurando ambiente de desenvolvimento..."
+    cd kwok-karpenter-install
+    ./setup.sh
+elif [[ $ENVIRONMENT == "simulation" ]]; then
+    echo "Configurando ambiente de simulação..."
+    cd kwok-karpenter-install
+    ./setup.sh
+    cd ../trace-simulation
+    ./run_simulation.sh
+fi
+
