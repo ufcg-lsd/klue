@@ -60,7 +60,10 @@ def exec_setup(setup):
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
     # Iniciando o coletor
-    collector = subprocess.Popen(['python3', 'trace_collector.py'])
+    duration = 54000
+    step = 600
+
+    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
     pid = collector.pid
     
     current_timestamp = get_first_timestamp(trace)
