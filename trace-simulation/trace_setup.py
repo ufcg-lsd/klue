@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import sys
+import subprocess
 from util.pod import PodGenerator
 from util.nodeclaim import NodeClaimGenerator
 
@@ -82,6 +83,12 @@ df_summed = df_pivoted.groupby(['pod', 'namespace', 'instance_type', 'nodepool',
 df_summed['cpu'] = df_summed['cpu'].fillna('NA')
 df_summed['memory'] = df_summed['memory'].fillna('NA')
 
+# Removendo pods que são criados e removidos no mesmo timestamp
+df_summed = df_summed[df_summed['start_time'] != df_summed['end_time']]
+
+# Removendo pods que são criados e removidos antes de 30 segundos
+df_summed = df_summed[(df_summed['end_time'] - 30) >= df_summed['start_time']]
+
 # Criando DataFrames separados para 'create' e 'delete' e concatenando
 df_create = df_summed[['pod', 'namespace', 'cpu', 'memory', 'instance_type', 'nodepool', 'node', 'start_time']].copy()
 df_create.rename(columns={'start_time': 'timestamp'}, inplace=True)
@@ -93,12 +100,6 @@ df_delete['action'] = 'delete'
 
 # Concatenando os DataFrames de 'create' e 'delete'
 df_final = pd.concat([df_create, df_delete])
-
-# Excluindo pods que aparecem somente no primeiro timestamp, mesmo com várias ocorrências
-first_timestamp = df_final['timestamp'].min()
-pods_with_multiple_timestamps = df_final.groupby('pod')['timestamp'].nunique()
-pods_to_keep = pods_with_multiple_timestamps[pods_with_multiple_timestamps > 1].index
-df_final = df_final[df_final['pod'].isin(pods_to_keep) | (df_final['timestamp'] != first_timestamp)]
 
 # Ordenando pelo timestamp, depois por 'action' (primeiro 'create', depois 'delete')
 df_final['action'] = pd.Categorical(df_final['action'], categories=['create', 'delete'], ordered=True)
@@ -117,11 +118,13 @@ df_final.to_csv('/tmp/final_trace.csv', index=False)
 
 setup = {'nodeclaims': [], 'pods': []}
 
+first_timestamp = df_final['timestamp'].min()
+
 # Criando JSON a partir do DataFrame df_final
 json_output = []
 for timestamp, group in df_final.groupby('timestamp'):
     if timestamp == first_timestamp:
-        setup['pods'] = pod_generator.get_pods_json(group)[0]
+        setup['pods'] = pod_generator.get_pods_json(group, node_toleration=True)[0]
     else:
         applied_objects, deleted_objects = pod_generator.get_pods_json(group)
 
@@ -138,8 +141,8 @@ nodeclaim_generator = NodeClaimGenerator()
 with open("data/instance_types.json") as f:
     instance_data = json.load(f)
 
-for (node, nodepool_name, instance_name), group in df_grouped:
-    nodeclaim = nodeclaim_generator.create_nodeclaim_from_instance(instance_name, instance_data, nodepool_name)
+for (node_ip, nodepool_name, instance_name), group in df_grouped:
+    nodeclaim = nodeclaim_generator.create_nodeclaim_from_instance(node_ip, instance_name, instance_data, nodepool_name)
 
     if nodeclaim:
         setup['nodeclaims'].append(nodeclaim)

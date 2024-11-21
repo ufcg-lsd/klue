@@ -43,7 +43,7 @@ if ! command_exists helm; then
 fi
 
 # Get and export the USERNAME of the user executing this script
-USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}' | sed -E 's/[_@].*//')
 export USERNAME
 
 # Create the EKS cluster from the file cluster-config.yaml
