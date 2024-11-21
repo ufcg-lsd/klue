@@ -3,6 +3,7 @@ import subprocess
 import time
 import yaml
 import os
+from datetime import datetime
 
 # Carregando o JSON (substitua pelo caminho do arquivo JSON real)
 with open('/tmp/output_pods.json', 'r') as file:
@@ -46,7 +47,7 @@ def exec_setup(setup):
             yaml.dump(nodeclaim, f, default_flow_style=False)
             f.write("---\n")
     apply_object(nodeclaims_path)
-    
+
     # Aplicando pods
     for namespace in setup['pods']:
         create_namespace_if_not_exists(namespace)
@@ -59,14 +60,11 @@ def exec_setup(setup):
 
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
-    # Iniciando o coletor
-    duration = 54000
-    step = 600
+    step = 120
 
-    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
-    pid = collector.pid
-    
     current_timestamp = get_first_timestamp(trace)
+    start = datetime.now()
+
     for entry in trace:
         entry_timestamp = entry['timestamp']
         if entry_timestamp > current_timestamp:
@@ -92,7 +90,8 @@ def exec_trace(trace):
             subprocess.run(['kubectl', 'delete', 'pod', pod_name, '-n', namespace])
             print(f"Pod {pod_name} deletado no namespace {namespace}")
 
-    os.kill(pid, 9)
+    duration = datetime.now() - start
+    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
 
 # Execução das funções
 exec_setup(data['setup'])

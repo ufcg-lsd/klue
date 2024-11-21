@@ -17,10 +17,23 @@ def read_metrics():
     return metrics
 
 def request_metrics(metric, duration, step):
+    end_time = int(time.time())  # Current time as end
+    start_time = end_time - int(duration.total_seconds())  # Start time based on duration
+
     response = requests.get(
-        f"{PROMETHEUS_HOST}/api/v1/query",
-        params={"query": f"{metric}[{int(duration.total_seconds())}s: {step}s]"}
+        f"{PROMETHEUS_HOST}/api/v1/query_range",
+        params={
+            "query": metric,
+            "start": start_time,
+            "end": end_time,
+            "step": f"{step}s"
+        }
     )
+
+    if response.status_code != 200:
+        print(f"Failed to fetch metric {metric}: {response.text}")
+        return None
+
     return response
 
 def write_csv(dir, metrics, duration, step):
@@ -69,16 +82,15 @@ def main():
         print("Duration and step must be integers.")
         sys.exit(1)
 
-    while True:
-        metrics = read_metrics()
-        now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+    metrics = read_metrics()
+    now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-        dir = f"output_csv_{now}"
-        os.mkdir(dir)
-        write_csv(dir, metrics, duration, step)
-        with zipfile.ZipFile(f"{dir}.zip", "w") as zip:
-            for file in glob.glob(f"{dir}/*.csv"):
-                zip.write(file)
+    dir = f"output_csv_{now}"
+    os.mkdir(dir)
+    write_csv(dir, metrics, duration, step)
+    with zipfile.ZipFile(f"{dir}.zip", "w") as zip:
+        for file in glob.glob(f"{dir}/*.csv"):
+            zip.write(file)
 
 if __name__ == "__main__":
     main()
