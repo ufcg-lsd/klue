@@ -97,7 +97,7 @@ def main():
         metrics = read_metrics()
         now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-        dir = f"output_csv_{now}"
+        dir = f"results/output_csv_{now}"
         os.mkdir(dir)
         write_csv(dir, metrics)
         with zipfile.ZipFile(f"{dir}.zip", "w") as zip:

@@ -43,7 +43,7 @@ if ! command_exists helm; then
 fi
 
 # Get and export the USERNAME of the user executing this script
-USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}' | sed -E 's/[_@].*//')
 export USERNAME
 
 # Create the EKS cluster from the file cluster-config.yaml
@@ -92,7 +92,7 @@ kubectl apply -f kube-prometheus/manifests/
 
 # ID 6417
 # Access Prometheus
- kubectl port-forward --address 0.0.0.0 pod/prometheus-k8s-0  30222:9090 -n monitoring &
+kubectl port-forward --address 0.0.0.0 pod/prometheus-k8s-0  30222:9090 -n monitoring &
 # Access Grafana
 # kubectl port-forward --address 0.0.0.0 pod/my-prometheus-grafana-{hash}  3000:3000 -n monitoring &
 # kubectl get secret my-prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode; echo
