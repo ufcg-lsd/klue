@@ -2,13 +2,14 @@
 
 # Função para exibir a ajuda
 usage() {
-    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster]"
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--trace-path PATH]"
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
     echo "  --sim                 Criar ambiente de simulação"
     echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
     echo "  --new-cluster         Criar um novo cluster"
+    echo "  --trace-path PATH     Especificar o caminho do trace a ser usado na simulação"
     echo "  -h, --help            Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -32,6 +33,7 @@ use_existing_cluster() {
 ENVIRONMENT=""
 CLUSTER_ACTION=""
 CLUSTER_CONTEXT=""
+TRACE_PATH=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -52,6 +54,10 @@ while [[ $# -gt 0 ]]; do
             CLUSTER_ACTION="new"
             shift
             ;;
+        --trace-path)
+            TRACE_PATH="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             ;;
@@ -70,6 +76,11 @@ fi
 
 if [[ $CLUSTER_ACTION == "use" && -z $CLUSTER_CONTEXT ]]; then
     echo "Erro: O nome do contexto é necessário ao usar --use-cluster."
+    usage
+fi
+
+if [[ $ENVIRONMENT == "simulation" && -z $TRACE_PATH ]]; then
+    echo "Erro: É necessário especificar --trace-path ao usar --sim."
     usage
 fi
 
@@ -93,6 +104,6 @@ elif [[ $ENVIRONMENT == "simulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh
     cd ../trace-simulation
-    ./run_simulation.sh
+    ./run_simulation.sh --trace-path "$TRACE_PATH"
 fi
 

@@ -26,7 +26,6 @@ def request_metrics(metric, duration, step):
             "query": metric,
             "start": start_time,
             "end": end_time,
-            "step": f"{step}s"
         }
     )
 
@@ -38,9 +37,8 @@ def request_metrics(metric, duration, step):
 
 def write_csv(dir, metrics, duration, step):
     for metric in metrics:
-        response = request_metrics(metric, duration, step)
+        response = request_metrics(metric, duration)
 
-        # Check if the response contains "data" and "result"
         try:
             results = response.json().get("data", {}).get("result", [])
         except json.JSONDecodeError:
@@ -53,7 +51,6 @@ def write_csv(dir, metrics, duration, step):
 
         metric_name = results[0]["metric"].get("__name__", "")
 
-        # Write the samples.
         with open(f"{dir}/{metric_name}.csv", "w") as f:
             writer = csv.writer(f)
             labelnames = list(results[0]["metric"].keys())

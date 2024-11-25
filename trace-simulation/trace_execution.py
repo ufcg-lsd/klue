@@ -85,7 +85,6 @@ def exec_setup(setup):
 
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
-    step = 600
     current_timestamp = get_first_timestamp(trace)
     start = datetime.now()
     time.sleep(600)
@@ -116,7 +115,7 @@ def exec_trace(trace):
             print(f"Pod {pod_name} deletado no namespace {namespace}")
 
     duration = datetime.now() - start + 10
-    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
+    collector = subprocess.Popen(['python3', 'trace_collector.py', duration])
 
 # Execução das funções
 exec_setup(data['setup'])

@@ -1,4 +1,7 @@
 go install github.com/google/ko@latest
+export PATH=$PATH:~/go/bin
+source ~/.bashrc
+
 
 # Setup Prometheus and Grafana
 
