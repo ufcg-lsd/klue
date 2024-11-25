@@ -17,7 +17,7 @@ class PodGenerator:
         mebibytes = int(value) // (2 ** 20)
         return f"{mebibytes}Mi"
 
-    def get_pods_json(self, group: pd.DataFrame):
+    def get_pods_json(self, group: pd.DataFrame, node_toleration = False):
         '''
         Function to create a JSON that can be converted into a Pod YAML, for each line within a group of lines.
         The lines must follow this format:
@@ -25,6 +25,22 @@ class PodGenerator:
         '''
         applied_objects, deleted_objects = {}, []
         for _, row in group.iterrows():
+            tolerations = [
+                {
+                    "key": f"{row['nodepool']}",
+                    "operator": "Exists",
+                    "effect": "NoSchedule"
+                }
+            ]
+
+            if node_toleration:
+                tolerations.append(
+                    {
+                        "key": f"{row['node']}",
+                        "operator": "Exists",
+                        "effect": "NoSchedule"
+                    }
+                )
             namespace = row['namespace']
             pod_data = {
                 "apiVersion": "v1",
@@ -37,13 +53,7 @@ class PodGenerator:
                             "image": "fake"
                         }
                     ],
-                    "tolerations": [
-                        {
-                            "key": f"{row['nodepool']}",
-                            "operator": "Exists",
-                            "effect": "NoSchedule"
-                        }
-                    ]
+                    "tolerations": tolerations
                 }
             }
             

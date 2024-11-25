@@ -35,6 +35,26 @@ def apply_object(yaml_path):
     subprocess.run(['kubectl', 'apply', '-f', yaml_path])
     print(f"Objeto aplicado a partir de {yaml_path}")
 
+def get_nodeclaim_as_dict(nodeclaim_name):
+    result = subprocess.run(
+        ["kubectl", "get", "nodeclaim", nodeclaim_name, "-o", "yaml"],
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    return yaml.safe_load(result.stdout)
+
+def remove_ip_taint(nodeclaim_name):
+    nodeclaim_dict = get_nodeclaim_as_dict(nodeclaim_name)
+    taints = nodeclaim_dict["spec"].get("taints", [])
+    node_name = nodeclaim_dict["status"].get("nodeName")
+
+    for taint in taints:
+        key = taint.get("key")
+        effect = taint.get("effect")
+        if key and effect and key.startswith("ip-"):
+            command = ["kubectl", "taint", "nodes", node_name, f"{key}:{effect}-"]
+            subprocess.run(command)
+
 def get_first_timestamp(data):
     return data[0]["timestamp"]
 
@@ -58,10 +78,16 @@ def exec_setup(setup):
                 f.write("---\n")
         apply_object(yaml_path)
 
+    # Removendo taints dos nós
+    for nodeclaim in setup['nodeclaims']:
+        remove_ip_taint(nodeclaim['metadata']['name'])
+        print("Taints iniciais de todos os nós foram removidos")
+
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
     current_timestamp = get_first_timestamp(trace)
     start = datetime.now()
+    time.sleep(600)
 
     for entry in trace:
         entry_timestamp = entry['timestamp']
@@ -88,7 +114,7 @@ def exec_trace(trace):
             subprocess.run(['kubectl', 'delete', 'pod', pod_name, '-n', namespace])
             print(f"Pod {pod_name} deletado no namespace {namespace}")
 
-    duration = datetime.now() - start
+    duration = datetime.now() - start + 10
     collector = subprocess.Popen(['python3', 'trace_collector.py', duration])
 
 # Execução das funções

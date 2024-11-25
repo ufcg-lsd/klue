@@ -54,7 +54,7 @@ class NodeClaimGenerator:
             print(f"Erro ao executar kubectl: {e.stderr}")
             return None
 
-    def create_nodeclaim_from_instance(self, instance_name, instance_data, nodepool_name):
+    def create_nodeclaim_from_instance(self, node_ip, instance_name, instance_data, nodepool_name):
         nodepool_info = self.get_nodepool_info(nodepool_name, instance_name)
         instance_info = next((item for item in instance_data if item["name"] == instance_name), None)
         
@@ -67,6 +67,12 @@ class NodeClaimGenerator:
         
         resources = instance_info.get("resources", {})
         offerings = instance_info.get("offerings", [])
+        
+        taints = nodepool_info["taints"] + [{
+            "key": node_ip,
+            "value": "True",
+            "effect": "NoSchedule"
+        }]
         
         nodeclaim = {
             "apiVersion": "karpenter.sh/v1",
@@ -116,7 +122,7 @@ class NodeClaimGenerator:
                 "expireAfter": nodepool_info["expireAfter"],
                 "nodeClassRef": nodepool_info["nodeClassRef"],
                 "requirements": nodepool_info["requirements"],
-                "taints": nodepool_info["taints"],
+                "taints": taints,
                 "resources": {
                     "requests": {
                         "cpu": resources.get("cpu", "N/A"),
