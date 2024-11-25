@@ -3,6 +3,7 @@ import subprocess
 import time
 import yaml
 import os
+from datetime import datetime
 
 # Carregando o JSON (substitua pelo caminho do arquivo JSON real)
 with open('/tmp/output_pods.json', 'r') as file:
@@ -84,7 +85,11 @@ def exec_setup(setup):
 
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
+    step = 600
     current_timestamp = get_first_timestamp(trace)
+    start = datetime.now()
+    time.sleep(600)
+
     for entry in trace:
         entry_timestamp = entry['timestamp']
         if entry_timestamp > current_timestamp:
@@ -110,17 +115,9 @@ def exec_trace(trace):
             subprocess.run(['kubectl', 'delete', 'pod', pod_name, '-n', namespace])
             print(f"Pod {pod_name} deletado no namespace {namespace}")
 
-# Iniciando o coletor
-collector = subprocess.Popen(['python3', 'trace_collector.py'])
-pid = collector.pid
+    duration = datetime.now() - start + 10
+    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
 
 # Execução das funções
 exec_setup(data['setup'])
-
-# Bug encontrado, precisamos resolver colocando a feat do tempo inicial do setup
-print("Acabei o setup, vou dormir 600 segundos")
-time.sleep(600)
 exec_trace(data['trace'])
-
-time.sleep(3800)
-os.kill(pid, 9)

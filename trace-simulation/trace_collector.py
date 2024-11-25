@@ -3,6 +3,7 @@ import requests
 import time
 import json
 import os
+import sys
 from datetime import datetime, timedelta
 import zipfile
 import glob
@@ -15,31 +16,29 @@ def read_metrics():
         metrics = [line.strip() for line in f]
     return metrics
 
-def get_last_run_duration():
-    if os.path.exists(TIMESTAMP_FILE):
-        with open(TIMESTAMP_FILE, 'r') as f:
-            last_run_time = datetime.fromisoformat(f.read().strip())
-        duration = datetime.now() - last_run_time
-    else:
-        duration = timedelta(hours=1)
-    return duration
+def request_metrics(metric, duration, step):
+    end_time = int(time.time())  # Current time as end
+    start_time = end_time - int(duration.total_seconds())  # Start time based on duration
 
-def update_last_run_timestamp():
-    with open(TIMESTAMP_FILE, 'w') as f:
-        f.write(datetime.now().isoformat())
-
-def request_metrics(metric, duration):
     response = requests.get(
-        f"{PROMETHEUS_HOST}/api/v1/query",
-        params={"query": f"{metric}[{int(duration.total_seconds())}s]"}
+        f"{PROMETHEUS_HOST}/api/v1/query_range",
+        params={
+            "query": metric,
+            "start": start_time,
+            "end": end_time,
+            "step": f"{step}s"
+        }
     )
+
+    if response.status_code != 200:
+        print(f"Failed to fetch metric {metric}: {response.text}")
+        return None
+
     return response
 
-def write_csv(dir, metrics):
-    duration = get_last_run_duration()
-
+def write_csv(dir, metrics, duration, step):
     for metric in metrics:
-        response = request_metrics(metric, duration)
+        response = request_metrics(metric, duration, step)
 
         # Check if the response contains "data" and "result"
         try:
@@ -71,38 +70,27 @@ def write_csv(dir, metrics):
                         row.append(x)
                     writer.writerow(row)
 
-    update_last_run_timestamp()
-
-def write_json(f, metrics):
-    results = []
-    for metric in metrics:
-        response = request_metrics(metric, timedelta(seconds=30))
-
-        # Check if the response contains "data" and "result"
-        try:
-            metric_results = response.json().get("data", {}).get("result", [])
-            if metric_results:
-                results.append(metric_results)
-            else:
-                print(f"No results for metric {metric}")
-        except json.JSONDecodeError:
-            print(f"Failed to decode JSON for metric {metric}")
-            continue
-
-    json.dump(results, f, indent=4)
-
 def main():
-    while True:
-        time.sleep(3600)
-        metrics = read_metrics()
-        now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+    if len(sys.argv) < 3:
+        print("Usage: python script.py <duration_in_seconds> <step_in_seconds>")
+        sys.exit(1)
 
-        dir = f"results/output_csv_{now}"
-        os.mkdir(dir)
-        write_csv(dir, metrics)
-        with zipfile.ZipFile(f"{dir}.zip", "w") as zip:
-            for file in glob.glob(f"{dir}/*.csv"):
-                zip.write(file)
+    try:
+        duration = timedelta(seconds=int(sys.argv[1]))
+        step = int(sys.argv[2])
+    except ValueError:
+        print("Duration and step must be integers.")
+        sys.exit(1)
+
+    metrics = read_metrics()
+    now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+
+    dir = f"output_csv_{now}"
+    os.mkdir(dir)
+    write_csv(dir, metrics, duration, step)
+    with zipfile.ZipFile(f"{dir}.zip", "w") as zip:
+        for file in glob.glob(f"{dir}/*.csv"):
+            zip.write(file)
 
 if __name__ == "__main__":
     main()
