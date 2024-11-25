@@ -3,11 +3,27 @@ import json
 import sys
 from util.pod import PodGenerator
 from util.nodeclaim import NodeClaimGenerator
+import os
 
-kube_pod_container_resource_requests_path = sys.argv[1]
-karpenter_pods_state_path = sys.argv[2]
+def find_csv_in_directory(directory, filename):
+    for root, _, files in os.walk(directory):
+        if filename in files:
+            return os.path.join(root, filename)
+    return None
 
-# Carregando os arquivos CSV
+if len(sys.argv) < 2:
+    print("Usage: python script.py <directory_path>")
+    sys.exit(1)
+
+directory = sys.argv[1]
+
+kube_pod_container_resource_requests_path = find_csv_in_directory(directory, "kube_pod_container_resource_requests.csv")
+karpenter_pods_state_path = find_csv_in_directory(directory, "karpenter_pods_state.csv")
+
+if not kube_pod_container_resource_requests_path or not karpenter_pods_state_path:
+    print("Error: Required CSV files not found in the directory.")
+    sys.exit(1)
+
 kube_pod_container_resource_requests = pd.read_csv(kube_pod_container_resource_requests_path)
 karpenter_pods_state = pd.read_csv(karpenter_pods_state_path)
 
@@ -47,7 +63,7 @@ timestamps_karpenter_pods_state = karpenter_pods_state.groupby(["pod", "nodepool
 # Fazendo o merge com base em pod, namespace
 df_merged = pd.merge(
     timestamps_resource_requests, timestamps_karpenter_pods_state,
-    on=["pod"], 
+    on=["pod"],
     how="left", suffixes=('_kube_pod_container_resource_requests', '_kube_pod_info')
 )
 
@@ -63,8 +79,8 @@ df_merged = df_merged.drop(columns=['start_time_kube_pod_container_resource_requ
 df_merged = df_merged.drop_duplicates()
 
 # Usar pivot para transformar 'resource' em colunas separadas para 'cpu' e 'memory'
-df_pivoted = df_merged.pivot(index=['pod', 'namespace', 'container', 'nodepool', 'instance_type', 'node', 'start_time', 'end_time'], 
-                      columns='resource', 
+df_pivoted = df_merged.pivot(index=['pod', 'namespace', 'container', 'nodepool', 'instance_type', 'node', 'start_time', 'end_time'],
+                      columns='resource',
                       values='value').reset_index()
 
 # Remover o nome do índice das colunas
