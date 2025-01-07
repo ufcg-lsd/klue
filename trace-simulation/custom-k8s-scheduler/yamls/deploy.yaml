@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-scheduler
+  template:
+    metadata:
+      labels:
+        app: custom-scheduler
+    spec:
+      serviceAccountName: custom-scheduler
+      containers:
+      - name: custom-scheduler
+        image: sobreira155/emulation-scheduler:0.1.5
+        imagePullPolicy: Always
+        command:
+        - /usr/local/bin/custom-k8s-scheduler
+        args:
+        - --scheduler-name=custom-scheduler
+        env:
+        - name: KUBERNETES_INSECURE_SKIP_TLS_VERIFY
+          value: "true"

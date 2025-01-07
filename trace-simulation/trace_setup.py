@@ -158,7 +158,7 @@ with open("data/instance_types.json") as f:
     instance_data = json.load(f)
 
 for (node_ip, nodepool_name, instance_name), group in df_grouped:
-    nodeclaim = nodeclaim_generator.create_nodeclaim_from_instance(node_ip, instance_name, instance_data, nodepool_name)
+    nodeclaim = nodeclaim_generator.create_nodeclaim_from_instance(instance_name, instance_data, nodepool_name)
 
     if nodeclaim:
         setup['nodeclaims'].append(nodeclaim)
