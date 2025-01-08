@@ -167,7 +167,7 @@ for nodepool in all_nodepools:
 change_nodepools_disruption_time(new_disruption_time)
 exec_setup(data['setup'])
 
-subprocess.run("python3", "pods_mapping.py")
+subprocess.run(["python3", "pods_mapping.py"])
 
 change_nodepools_disruption_time(first_disruption_time)
 exec_trace(data['trace'])

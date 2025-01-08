@@ -2,10 +2,6 @@ go install github.com/google/ko@latest
 export PATH=$PATH:~/go/bin
 source ~/.bashrc
 
-
-export PATH=$PATH:~/go/bin
-source ~/.bashrc
-
 # Setup Prometheus and Grafana
 
 kubectl create namespace monitoring
@@ -30,7 +26,7 @@ cd ..
 
 kubectl apply -f configuration-files/karpenter-servicemonitor.yml
 
-sleep 300
+# sleep 300
 
 # ID 6417
 # Access Prometheus

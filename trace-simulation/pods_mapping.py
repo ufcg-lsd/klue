@@ -1,5 +1,5 @@
 import pandas as pd
-from .util.k8s_api.k8s_client import K8SClient
+from util.k8s_api.k8s_client import K8SClient
 import re
 
 PODS_ALLOCATION_PATH = "/tmp/pods_allocation.csv"

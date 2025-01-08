@@ -30,53 +30,45 @@ class NodeClaimGenerator:
                 "resourceVersion": nodepool_data.get("metadata", {}).get("resourceVersion"),
                 "taints": nodepool_data.get("spec", {}).get("template", {}).get("spec", {}).get("taints", [])
             }
-
+            
             nodepool_info["requirements"] = [
                 requirement for requirement in nodepool_info["requirements"]
                 if requirement.get("key") != "node.kubernetes.io/instance-type"
             ]
-
+            
             nodepool_info["requirements"].append({
                 'key': 'node.kubernetes.io/instance-type',
                 'operator': 'In',
                 'values': [instance_name]
             })
-
+            
             # Extrai a arquitetura (kubernetes.io/arch) com valor padrão 'arm64' se não estiver presente
             architecture = next(
                 (req["values"][0] for req in nodepool_info["requirements"] if req.get("key") == "kubernetes.io/arch"),
                 "amd64"
             )
             nodepool_info["architecture"] = architecture
-
+                
             return nodepool_info
         except subprocess.CalledProcessError as e:
             print(f"Erro ao executar kubectl: {e.stderr}")
             return None
 
-<<<<<<< HEAD:trace-simulation/util/nodeclaim.py
-    def create_nodeclaim_from_instance(self, instance_name, instance_data, nodepool_name):
-=======
     def generate_nodeclaim(self, instance_name, instance_data, nodepool_name):
->>>>>>> trace-execution:trace-simulation/util/k8s_objects/nodeclaim_generator.py
         nodepool_info = self.get_nodepool_info(nodepool_name, instance_name)
         instance_info = next((item for item in instance_data if item["name"] == instance_name), None)
-
+        
         if not instance_info:
             return None
-
+        
         nodeclaim_name = self.reference_generator.generate_name()
         uid = self.reference_generator.generate_uuid()
-
+        
         resources = instance_info.get("resources", {})
         offerings = instance_info.get("offerings", [])
-<<<<<<< HEAD:trace-simulation/util/nodeclaim.py
-
-=======
         
         taints = nodepool_info["taints"]
         
->>>>>>> trace-execution:trace-simulation/util/k8s_objects/nodeclaim_generator.py
         nodeclaim = {
             "apiVersion": "karpenter.sh/v1",
             "kind": "NodeClaim",
@@ -125,7 +117,7 @@ class NodeClaimGenerator:
                 "expireAfter": nodepool_info["expireAfter"],
                 "nodeClassRef": nodepool_info["nodeClassRef"],
                 "requirements": nodepool_info["requirements"],
-                "taints": nodepool_info["taints"],
+                "taints": taints,
                 "resources": {
                     "requests": {
                         "cpu": resources.get("cpu", "N/A"),
@@ -168,7 +160,7 @@ class NodeClaimGenerator:
                 ]
             }
         }
-
+        
         for offering in offerings:
             if offering["Available"]:
                 for requirement in offering["Requirements"]:
@@ -179,5 +171,5 @@ class NodeClaimGenerator:
                     }
                     nodeclaim["spec"]["requirements"].append(requirement_dict)
                 break
-
+        
         return nodeclaim
