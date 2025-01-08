@@ -19,8 +19,7 @@ CURRENT_PATH=$(pwd)
 # Aplica os recursos do nodepool
 kubectl apply -f "$CURRENT_PATH/data/nodepools.yaml"
 
-# Passa o trace path como argumento para o script trace_setup.py
-python3 trace_setup.py "$TRACE_PATH"
+python3 trace_setup.py "$CURRENT_PATH/data/kube_pod_container_resource_requests.csv" "$CURRENT_PATH/data/karpenter_pods_state.csv" "$CURRENT_PATH/data/kube_pod_owner.csv" "$CURRENT_PATH/data/kube_replicaset_owner.csv"
 
 # Executa o trace_execution.py
 python3 trace_execution.py
