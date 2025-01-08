@@ -1031,3 +1031,8 @@ items:
 kind: List
 metadata:
   resourceVersion: ""
+---
+apiVersion: karpenter.kwok.sh/v1alpha1
+kind: KWOKNodeClass
+metadata:
+  name: default

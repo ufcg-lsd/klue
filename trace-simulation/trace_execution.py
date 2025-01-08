@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 # Carregando o JSON (substitua pelo caminho do arquivo JSON real)
-with open('/tmp/output_pods.json', 'r') as file:
+with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
 
 # Função para verificar se o namespace existe
@@ -58,6 +58,30 @@ def remove_ip_taint(nodeclaim_name):
 def get_first_timestamp(data):
     return data[0]["timestamp"]
 
+def change_nodepools_disruption_time(new_nodepools_disruption_time):
+    for nodepool, time in new_nodepools_disruption_time.items():
+        result = subprocess.run(
+            [
+                "kubectl", "patch", "nodepool", nodepool,
+                "--type=merge",
+                "-p", f'{{"spec":{{"disruption":{{"consolidateAfter":"{time}"}}}}}}'
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        ).stdout.strip()
+
+def get_disruption_time(nodepool_name):
+    result = subprocess.run(
+        ["kubectl", "get", "nodepool", nodepool_name, "-o", "jsonpath={.spec.disruption.consolidateAfter}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        ).stdout.strip()
+    return result
+
 # Função para rodar o setup inicial
 def exec_setup(setup):
     # Aplicando nodeclaims
@@ -68,20 +92,15 @@ def exec_setup(setup):
             f.write("---\n")
     apply_object(nodeclaims_path)
 
-    # Aplicando pods
-    for namespace in setup['pods']:
+    # Aplicando deployments
+    for namespace in setup['deployments']:
         create_namespace_if_not_exists(namespace)
         yaml_path = f'/tmp/{namespace}_setup.yaml'
-        for pod in setup['pods'][namespace]:
+        for pod in setup['deployments'][namespace]:
             with open(yaml_path, 'a') as f:
                 yaml.dump(pod, f, default_flow_style=False)
                 f.write("---\n")
         apply_object(yaml_path)
-
-    # Removendo taints dos nós
-    for nodeclaim in setup['nodeclaims']:
-        remove_ip_taint(nodeclaim['metadata']['name'])
-        print("Taints iniciais de todos os nós foram removidos")
 
 # Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
@@ -102,22 +121,53 @@ def exec_trace(trace):
             create_namespace_if_not_exists(namespace)
             yaml_path = f'/tmp/{namespace}_execution.yaml'
             delete_path_if_exists(yaml_path)
-            for pod in entry['applied_objects'][namespace]:
+            for object in entry['applied_objects'][namespace]:
                 with open(yaml_path, 'a') as f:
-                    yaml.dump(pod, f, default_flow_style=False)
+                    yaml.dump(object, f, default_flow_style=False)
                     f.write("---\n")
             apply_object(yaml_path)
 
+        # Processando scaled_replicasets
+        for object in entry['scaled_replicasets']:
+            name = object['name']
+            namespace = object['namespace']
+            pods = object['pods']
+            kind = object['kind']
+            # Esse if é só para não executar scalling dos daemonsets, statefulsets e jobs
+            if kind == 'deployment' or kind ==  'statefulset':
+                # kubectl scale <tipo-do-recurso>/<nome> --replicas=<quantidade> -n <namespace>
+                subprocess.run(['kubectl', 'scale', f'deployment/{name}', f'--replicas={pods}', '-n', namespace])
+                print(f"Replicaset {name} sofreu operação de scalling para {pods} no namespace {namespace}")
+
         # Processando deleted_objects
-        for obj in entry['deleted_objects']:
-            pod_name = obj['name']
-            namespace = obj['namespace']
-            subprocess.run(['kubectl', 'delete', 'pod', pod_name, '-n', namespace])
-            print(f"Pod {pod_name} deletado no namespace {namespace}")
+        for object in entry['deleted_objects']:
+            pod_name = object['name']
+            namespace = object['namespace']
+            subprocess.run(['kubectl', 'delete', 'deployment', pod_name, '-n', namespace])
+            print(f"Deployment {pod_name} deletado no namespace {namespace}")
 
-    duration = datetime.now() - start + 10
-    collector = subprocess.Popen(['python3', 'trace_collector.py', duration, step])
+    duration = int((datetime.now() - start).total_seconds() + 10)
+    collector = subprocess.Popen(['python3', 'trace_collector.py', f"{duration}", f"{step}"])
 
-# Execução das funções
+all_nodepools = subprocess.run(
+    ["kubectl", "get", "nodepools", "-o", "custom-columns=NAME:.metadata.name", "--no-headers"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True
+    ).stdout.strip().split("\n")
+
+first_disruption_time = {}
+new_disruption_time = {}
+
+for nodepool in all_nodepools:
+    first_disruption_time[nodepool] = get_disruption_time(nodepool)
+    new_disruption_time[nodepool] = "6000m"
+
+change_nodepools_disruption_time(new_disruption_time)
 exec_setup(data['setup'])
+
+subprocess.run("python3", "pods_mapping.py")
+
+change_nodepools_disruption_time(first_disruption_time)
 exec_trace(data['trace'])
