@@ -14,7 +14,7 @@ FROM alpine:latest
 
 COPY --from=builder /app/custom-k8s-scheduler /usr/local/bin/custom-k8s-scheduler
 
-COPY ./pod_node_mapping.csv /usr/local/bin/pod_node_mapping.csv
+COPY /tmp/pods_and_nodes_map.csv /usr/local/bin/pod_node_mapping.csv
 
 RUN chmod +x /usr/local/bin/custom-k8s-scheduler
 

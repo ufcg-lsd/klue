@@ -9,8 +9,8 @@ fi
 TRACE_PATH=$1
 
 # Verifica se o arquivo especificado existe
-if [ ! -f "$TRACE_PATH" ]; then
-  echo "Erro: Arquivo $TRACE_PATH não encontrado."
+if [ ! -d "$TRACE_PATH" ]; then
+  echo "Erro: Diretorio $TRACE_PATH não encontrado."
   exit 1
 fi
 

@@ -5,6 +5,8 @@ import yaml
 import os
 from datetime import datetime
 
+CURRENT_PATH=$(pwd)
+
 # Carregando o JSON (substitua pelo caminho do arquivo JSON real)
 with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
@@ -170,4 +172,5 @@ exec_setup(data['setup'])
 subprocess.run(["python3", "pods_mapping.py"])
 
 change_nodepools_disruption_time(first_disruption_time)
+subprocess.run(["bash", "$CURRENT_PATH/custom-k8s-scheduler/build-scheduler.sh"])
 exec_trace(data['trace'])
