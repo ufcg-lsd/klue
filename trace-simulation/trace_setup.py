@@ -1,12 +1,29 @@
+import os
 import pandas as pd
 import json
 import sys
 from util.k8s_object_generator import K8SObjectGenerator
 
-kube_pod_container_resource_requests_path = sys.argv[1]
-karpenter_pods_state_path = sys.argv[2]
-kube_pod_owner_path = sys.argv[3]
-kube_replicaset_owner_path = sys.argv[4]
+def find_csv_in_directory(directory, filename):
+    for root, _, files in os.walk(directory):
+        if filename in files:
+            return os.path.join(root, filename)
+    return None
+
+if len(sys.argv) < 2:
+    print("Usage: python script.py <directory_path>")
+    sys.exit(1)
+
+directory = sys.argv[1]
+
+kube_pod_container_resource_requests_path = find_csv_in_directory(directory, "kube_pod_container_resource_requests.csv")
+karpenter_pods_state_path = find_csv_in_directory(directory, "karpenter_pods_state.csv")
+kube_pod_owner_path = find_csv_in_directory(directory, "kube_pod_owner.csv")
+kube_replicaset_owner_path = find_csv_in_directory(directory, "kube_replicaset_owner.csv")
+
+if not kube_pod_container_resource_requests_path or not karpenter_pods_state_path or not kube_pod_owner_path or not kube_replicaset_owner_path :
+    print("Error: Required CSV files not found in the directory.")
+    sys.exit(1)
 
 # Carregando os arquivos CSV
 kube_pod_container_resource_requests = pd.read_csv(kube_pod_container_resource_requests_path)
@@ -40,7 +57,7 @@ kube_pod_container_resource_requests = kube_pod_container_resource_requests[["ti
 
 # Merge direto usando 'timestamp' e 'pod' como chaves
 df_merged = pd.merge(
-    kube_pod_container_resource_requests, 
+    kube_pod_container_resource_requests,
     karpenter_pods_state,
     on=["timestamp", "pod", "node"],
     how="left",
@@ -56,8 +73,8 @@ df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'nodepool', 'ins
 }).reset_index()
 
 # Usar pivot para transformar 'resource' em colunas separadas para 'cpu' e 'memory'
-df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node'], 
-                      columns='resource', 
+df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node'],
+                      columns='resource',
                       values='value').reset_index()
 
 # Preenchendo valores ausentes com 'NA' para CPU e memória
