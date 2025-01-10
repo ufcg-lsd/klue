@@ -4,26 +4,10 @@ import json
 import sys
 from util.k8s_object_generator import K8SObjectGenerator
 
-def find_csv_in_directory(directory, filename):
-    for root, _, files in os.walk(directory):
-        if filename in files:
-            return os.path.join(root, filename)
-    return None
-
-if len(sys.argv) < 2:
-    print("Usage: python script.py <directory_path>")
-    sys.exit(1)
-
-directory = sys.argv[1]
-
-kube_pod_container_resource_requests_path = find_csv_in_directory(directory, "kube_pod_container_resource_requests.csv")
-karpenter_pods_state_path = find_csv_in_directory(directory, "karpenter_pods_state.csv")
-kube_pod_owner_path = find_csv_in_directory(directory, "kube_pod_owner.csv")
-kube_replicaset_owner_path = find_csv_in_directory(directory, "kube_replicaset_owner.csv")
-
-if not kube_pod_container_resource_requests_path or not karpenter_pods_state_path or not kube_pod_owner_path or not kube_replicaset_owner_path :
-    print("Error: Required CSV files not found in the directory.")
-    sys.exit(1)
+kube_pod_container_resource_requests_path = sys.argv[1]
+karpenter_pods_state_path = sys.argv[2]
+kube_pod_owner_path = sys.argv[3]
+kube_replicaset_owner_path = sys.argv[4]
 
 # Carregando os arquivos CSV
 kube_pod_container_resource_requests = pd.read_csv(kube_pod_container_resource_requests_path)

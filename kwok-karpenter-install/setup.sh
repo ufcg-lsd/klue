@@ -26,7 +26,9 @@ cd ..
 
 kubectl apply -f configuration-files/karpenter-servicemonitor.yml
 
-# sleep 300
+while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
+  sleep 5
+done
 
 # ID 6417
 # Access Prometheus
