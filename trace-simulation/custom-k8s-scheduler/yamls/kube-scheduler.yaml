@@ -46,6 +46,8 @@ spec:
     - mountPath: /etc/kubernetes/scheduler.conf
       name: kubeconfig
       readOnly: true
+    args:
+    - --scheduler-name=custom-scheduler
   hostNetwork: true
   priority: 2000001000
   priorityClassName: system-node-critical
