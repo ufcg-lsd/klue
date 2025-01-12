@@ -15,7 +15,7 @@ spec:
       serviceAccountName: custom-scheduler
       containers:
       - name: custom-scheduler
-        image: sobreira155/emulation-scheduler:latest
+        image: sobreira155/emulation-scheduler:0.1.5
         imagePullPolicy: Always
         command:
         - /usr/local/bin/custom-k8s-scheduler

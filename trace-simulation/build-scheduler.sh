@@ -29,9 +29,6 @@ while true; do
 done
 
 
-echo "Switching to the default k8s scheduler"
-kubectl apply -f yamls/kube-scheduler.yaml
-
 #docker build -t sobreira155/emulation-scheduler:latest custom-k8s-scheduler
 #docker push sobreira155/emulation-scheduler:latest
 #kubectl apply -f /home/geraldo/karpenter-research/trace-simulation/custom-k8s-scheduler/yamls/rbac.yaml
