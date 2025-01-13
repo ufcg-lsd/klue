@@ -59,7 +59,7 @@ class DeploymentsGenerator:
                 pod_template = {
                     "metadata": {"labels": labels},
                     "spec": {
-                        "schedulerName": "my-custom-scheduler",
+                        "schedulerName": "custom-scheduler",
                         "affinity": affinity,
                         "tolerations": tolerations,
                         "containers": [

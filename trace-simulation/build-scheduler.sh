@@ -28,6 +28,7 @@ while true; do
     sleep 10
 done
 
+bash default-script.sh
 
 #docker build -t sobreira155/emulation-scheduler:latest custom-k8s-scheduler
 #docker push sobreira155/emulation-scheduler:latest

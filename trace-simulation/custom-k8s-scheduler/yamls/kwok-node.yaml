@@ -14,11 +14,6 @@ metadata:
     node-role.kubernetes.io/agent: ""
     type: kwok
   name: kwok-node-0
-spec:
-  taints: # Avoid scheduling actual running pods to fake Node
-  - effect: NoSchedule
-    key: kwok.x-k8s.io/node
-    value: fake
 status:
   allocatable:
     cpu: 32
@@ -40,3 +35,4 @@ status:
     osImage: ""
     systemUUID: ""
   phase: Running
+
