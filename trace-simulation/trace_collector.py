@@ -20,24 +20,43 @@ def request_metrics(metric, duration, step):
     end_time = int(time.time())  # Current time as end
     start_time = end_time - int(duration.total_seconds())  # Start time based on duration
 
-    response = requests.get(
-        f"{PROMETHEUS_HOST}/api/v1/query_range",
-        params={
-            "query": metric,
-            "start": start_time,
-            "end": end_time,
-        }
-    )
-
-    if response.status_code != 200:
-        print(f"Failed to fetch metric {metric}: {response.text}")
+    # Ensure step is a valid duration
+    if not step or step <= 0:
+        print(f"Invalid step value: {step}. It must be a positive integer.")
         return None
 
-    return response
+    try:
+        # Format step as a valid duration string, e.g., "30s"
+        step_duration = f"{step}s"
+
+        # Make the request to Prometheus
+        response = requests.get(
+            f"{PROMETHEUS_HOST}/api/v1/query_range",
+            params={
+                "query": metric,
+                "start": start_time,
+                "end": end_time,
+                "step": step_duration
+            }
+        )
+
+        # Check for request success
+        if response.status_code != 200:
+            print(f"Failed to fetch metric {metric}: {response.text}")
+            return None
+
+        return response
+    except requests.RequestException as e:
+        print(f"Error fetching metric {metric}: {e}")
+        return None
 
 def write_csv(dir, metrics, duration, step):
     for metric in metrics:
-        response = request_metrics(metric, duration)
+        response = request_metrics(metric, duration, step)
+
+        # If the response is None, skip processing this metric
+        if response is None:
+            continue
 
         try:
             results = response.json().get("data", {}).get("result", [])
@@ -83,11 +102,14 @@ def main():
     now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
     dir = f"output_csv_{now}"
-    os.mkdir(dir)
+    os.makedirs(dir, exist_ok=True)
     write_csv(dir, metrics, duration, step)
+
+    # Zip the CSV files
     with zipfile.ZipFile(f"{dir}.zip", "w") as zip:
         for file in glob.glob(f"{dir}/*.csv"):
             zip.write(file)
 
 if __name__ == "__main__":
     main()
+
