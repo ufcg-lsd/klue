@@ -146,9 +146,9 @@ def exec_trace(trace):
             subprocess.run(['kubectl', 'delete', 'deployment', pod_name, '-n', namespace])
             print(f"Deployment {pod_name} deletado no namespace {namespace}")
 
-    duration = int((datetime.now() - start).total_seconds() + 10)
+    duration = int((datetime.now() - start).total_seconds() + 15)
     port_forward = subprocess.Popen(["bash", "port-forward.sh"])
-    port_forward.wait()
+    time.sleep(10)
     collector = subprocess.Popen(['python3', 'trace_collector.py', f"{duration}", f"{step}"])
 
 all_nodepools = subprocess.run(
