@@ -78,6 +78,15 @@ spec:
         app: custom-scheduler
     spec:
       serviceAccountName: custom-scheduler
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kwok.x-k8s.io/node
+                    operator: NotIn
+                    values:
+                      - fake
       containers:
         - name: custom-scheduler
           image: registry.k8s.io/kube-scheduler:v1.31.0
