@@ -19,6 +19,7 @@ make toolchain
 make build
 make install-kwok
 make apply
+make gen_instance_types
 
 kubectl get po -A
 

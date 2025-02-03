@@ -5,6 +5,8 @@ import yaml
 import os
 from datetime import datetime
 
+TRACE_STEP = 600
+
 # Carregando o JSON (substitua pelo caminho do arquivo JSON real)
 with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
@@ -107,7 +109,7 @@ def exec_trace(trace):
     step = 30
     current_timestamp = get_first_timestamp(trace)
     start = datetime.now()
-    time.sleep(600)
+    time.sleep(TRACE_STEP)
 
     for entry in trace:
         entry_timestamp = entry['timestamp']

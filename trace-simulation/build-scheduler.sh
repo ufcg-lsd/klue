@@ -1,7 +1,15 @@
 #!/bin/bash
 
+PODS_AND_NODES_MAP="/tmp/pods_and_nodes_map.csv"
+
 cd ./custom-k8s-scheduler
-cp /tmp/pods_and_nodes_map.csv .
+
+while [ ! -d "$PODS_AND_NODES_MAP" ]; do
+    echo "Aguardando o diretório $DIR ser criado..."
+    sleep 2
+done
+
+cp "$PODS_AND_NODES_MAP" .
 if [ ! -f ./custom-scheduler ]; then
 	echo "Compiling scheduler code"
 	CGO_ENABLED=0 go build -o custom-scheduler .

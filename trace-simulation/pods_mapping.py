@@ -111,4 +111,6 @@ map_fake_and_real_nodes(fake_nodes_dict, real_nodes_dict, pods_allocation)
 
 pod_owners = get_owners_with_pods(k8s_client)
 
+print(pod_owners)
+
 map_pods_and_nodes(pods_allocation, pod_owners)

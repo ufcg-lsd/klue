@@ -3,3 +3,9 @@ __pycache__/
 
 # Playground is the place to devs that may not be uploaded
 playground/
+
+analysis
+
+trace-simulation/data
+
+vtex-collector
