@@ -25,11 +25,7 @@ def sum_ignore_na(series):
         return pd.NA
     return series.sum(skipna=True)
 
-# Identificando as colunas de 'name...2' até 'name...30', excluindo 'name...1'
-name_columns = [col for col in karpenter_pods_state.columns if col.startswith('name...') and col not in ['name...1']]
-
-# Consolidando as colunas 'name...2' até 'name...30' em uma única coluna 'pod' com o primeiro valor não-NA
-karpenter_pods_state['pod'] = karpenter_pods_state[name_columns].bfill(axis=1).iloc[:, 0]
+karpenter_pods_state["pod"] = karpenter_pods_state["name.1"]
 
 # Selecionando apenas as colunas finais desejadas
 karpenter_pods_state = karpenter_pods_state[['timestamp', 'instance_type', 'node', 'pod', 'nodepool', 'phase']]
