@@ -12,11 +12,12 @@ nodeGroups:
     desiredCapacity: 1
     privateNetworking: true
     iam:
-      instanceRoleARN: arn:aws:iam::463020534911:role/eks-loadtest
-      instanceProfileARN: arn:aws:iam::463020534911:instance-profile/eks-loadtest
+      instanceRoleARN: ${INSTANCE_ROLE_ARN}
+      instanceProfileARN: ${INSTANCE_PROFILE_ARN}
     tags:
       User: ${USERNAME}
       Environment: ${ENVIRONMENT}
       Name: ${CLUSTER_NAME}
       Product: ${PRODUCT}
       ApplicationName: ${APPLICATION_NAME}
+      Purpose: Kubernetes Emulation
