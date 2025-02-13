@@ -8,4 +8,4 @@ analysis
 
 vtex-collector
 
-trace-simulation/data/*.csv
+trace-emulation/data/*.csv

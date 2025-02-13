@@ -6,10 +6,10 @@ usage() {
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
-    echo "  --sim                 Criar ambiente de simulação"
+    echo "  --sim                 Criar ambiente de emulação"
     echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
     echo "  --new-cluster         Criar um novo cluster"
-    echo "  --trace-path PATH     Especificar o caminho do trace a ser usado na simulação"
+    echo "  --trace-path PATH     Especificar o caminho do trace a ser usado na emulação"
     echo "  -h, --help            Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --sim)
-            ENVIRONMENT="simulation"
+            ENVIRONMENT="emulation"
             shift
             ;;
         --use-cluster)
@@ -79,7 +79,7 @@ if [[ $CLUSTER_ACTION == "use" && -z $CLUSTER_CONTEXT ]]; then
     usage
 fi
 
-if [[ $ENVIRONMENT == "simulation" && -z $TRACE_PATH ]]; then
+if [[ $ENVIRONMENT == "emulation" && -z $TRACE_PATH ]]; then
     echo "Erro: É necessário especificar --trace-path ao usar --sim."
     usage
 fi
@@ -99,11 +99,11 @@ if [[ $ENVIRONMENT == "development" ]]; then
     echo "Configurando ambiente de desenvolvimento..."
     cd kwok-karpenter-install
     ./setup.sh
-elif [[ $ENVIRONMENT == "simulation" ]]; then
-    echo "Configurando ambiente de simulação..."
+elif [[ $ENVIRONMENT == "emulation" ]]; then
+    echo "Configurando ambiente de emulação..."
     cd kwok-karpenter-install
     ./setup.sh
-    cd ../trace-simulation
-    ./run_simulation.sh --trace-path "$TRACE_PATH"
+    cd ../trace-emulation
+    ./run-emulation.sh --trace-path "$TRACE_PATH"
 fi
 

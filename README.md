@@ -5,9 +5,9 @@ KLUE is a **cost-effective solution** that allows developers to **test and valid
 ---
 
 ## 🎯 Why Use KLUE?
-✅ **Save Costs** – Avoid unnecessary cloud expenses by testing changes in a simulated environment.  
+✅ **Save Costs** – Avoid unnecessary cloud expenses by testing changes in a emulated environment.  
 ✅ **Flexible and Modular** – Easily modify scenarios to experiment with different configurations and cloud-native tools.  
-✅ **Fast and Automated** – Deploy your simulated infrastructure with minimal effort.  
+✅ **Fast and Automated** – Deploy your emulated infrastructure with minimal effort.  
 ✅ **Realistic Workload Emulation** – Test Kubernetes solutions under conditions that mirror production.  
 ✅ **Internal Results Collector** – Automatically collect and analyze emulation results without additional setup.  
 

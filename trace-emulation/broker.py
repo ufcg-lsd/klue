@@ -151,7 +151,7 @@ def exec_trace(trace):
     duration = int((datetime.now() - start).total_seconds() + 15)
     port_forward = subprocess.Popen(["bash", "port-forward.sh"])
     time.sleep(10)
-    collector = subprocess.Popen(['python3', 'trace_collector.py', f"{duration}", f"{step}"])
+    collector = subprocess.Popen(['python3', 'collector.py', f"{duration}", f"{step}"])
 
 all_nodepools = subprocess.run(
     ["kubectl", "get", "nodepools", "-o", "custom-columns=NAME:.metadata.name", "--no-headers"],
