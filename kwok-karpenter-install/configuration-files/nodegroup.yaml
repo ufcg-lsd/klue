@@ -1,0 +1,23 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: ${CLUSTER_NAME}
+  region: us-east-1
+
+nodeGroups:
+  - name: ng-2-workers
+    labels: { role: workers }
+    instanceType: t2.xlarge
+    desiredCapacity: 1
+    privateNetworking: true
+    iam:
+      instanceRoleARN: ${INSTANCE_ROLE_ARN}
+      instanceProfileARN: ${INSTANCE_PROFILE_ARN}
+    tags:
+      User: ${USERNAME}
+      Environment: ${ENVIRONMENT}
+      Name: ${CLUSTER_NAME}
+      Product: ${PRODUCT}
+      ApplicationName: ${APPLICATION_NAME}
+      Purpose: Kubernetes Emulation

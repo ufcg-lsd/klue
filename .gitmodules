@@ -1,0 +1,9 @@
+[submodule "kwok-karpenter-install/karpenter-code"]
+	path = kwok-karpenter-install/karpenter-code
+	url = https://github.com/ufcg-lsd/karpenter-code.git
+[submodule "kwok-karpenter-install/kube-prometheus"]
+	path = kwok-karpenter-install/kube-prometheus
+	url = https://github.com/prometheus-operator/kube-prometheus.git
+[submodule "kwok-karpenter-install/kwok-karpenter-install/karpenter-code"]
+	path = kwok-karpenter-install/kwok-karpenter-install/karpenter-code
+	url = https://github.com/ufcg-lsd/karpenter-code.git

@@ -1,0 +1,11 @@
+.env
+__pycache__/
+
+# Playground is the place to devs that may not be uploaded
+playground/
+
+analysis
+
+vtex-collector
+
+trace-emulation/data/*.csv

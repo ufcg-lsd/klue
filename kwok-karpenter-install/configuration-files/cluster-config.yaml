@@ -1,0 +1,31 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: ${CLUSTER_NAME}
+  region: us-east-1
+
+iam:
+  serviceRoleARN: ${SERVICE_ROLE_ARN}
+
+iamIdentityMappings:
+  - arn: ${CLUSTER_CREATION_ARN}
+    username: admin-user1
+    groups:
+      - system:masters
+    noDuplicateARNs: true
+
+vpc:
+  id: vpc-608da31a
+  sharedNodeSecurityGroup: sg-deb051f6
+  subnets:
+    private:
+      us-east-1d: { id: subnet-27d4cc09 }
+      us-east-1f: { id: subnet-f0a770fe }
+
+addons:
+  - name: aws-ebs-csi-driver
+  - name: coredns
+  - name: kube-proxy
+  - name: vpc-cni
+

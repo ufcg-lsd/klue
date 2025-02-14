@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exp1-deployment
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: exp1-deployment
+  template:
+    metadata:
+      labels:
+        app: exp1-deployment
+      annotations:
+        kwok.x-k8s.io/usage-cpu: 200m
+    spec:
+      containers:
+      - name: exp1-container-a
+        image: fake
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 100Mi
+      - name: exp1-container-b
+        image: fake
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 100Mi

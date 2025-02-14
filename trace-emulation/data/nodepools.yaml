@@ -1,0 +1,1038 @@
+apiVersion: v1
+items:
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"activity-flow"}'
+      karpenter.sh/nodepool-hash: "12761635486572056156"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:02Z"
+    generation: 2
+    labels:
+      node-group: activity-flow
+    name: activity-flow
+    resourceVersion: "670756646"
+    uid: 755ab58f-4eb1-4596-874a-9e9bd16e8cf7
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r7g.2xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: activity-flow
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "8"
+      ephemeral-storage: 52407276Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 64658860Ki
+      nodes: "1"
+      pods: "58"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"clickhouse"}'
+      karpenter.sh/nodepool-hash: "4978632302296103613"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:05Z"
+    generation: 2
+    labels:
+      node-group: clickhouse
+    name: clickhouse
+    resourceVersion: "680760424"
+    uid: 53a11153-fb6c-48ef-afa2-f7981de63f1a
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: Never
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: clickhouse
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "164"
+      ephemeral-storage: 995894916Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 524724836Ki
+      nodes: "19"
+      pods: "4698"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"default"}'
+      karpenter.sh/nodepool-hash: "3441331066896035251"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:02Z"
+    generation: 2
+    name: default
+    resourceVersion: "680943381"
+    uid: 43e9c17a-5c3b-45c8-aaae-217773b1ef17
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: karpenter.k8s.aws/instance-category
+          operator: NotIn
+          values:
+          - t
+        - key: karpenter.k8s.aws/instance-cpu
+          operator: Gt
+          values:
+          - "2"
+        - key: karpenter.k8s.aws/instance-memory
+          operator: Gt
+          values:
+          - "4"
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        taints: []
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "64"
+      ephemeral-storage: 681359100Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 126728544Ki
+      nodes: "13"
+      pods: "754"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"default-spot"}'
+      karpenter.sh/nodepool-hash: "5132950093603325381"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:03Z"
+    generation: 2
+    labels:
+      node-group: default-spot
+    name: default-spot
+    resourceVersion: "680318457"
+    uid: 9902fbe5-2abc-4ba9-9231-007b9dda9be2
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: Never
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: default-spot
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "0"
+      ephemeral-storage: "0"
+      memory: "0"
+      nodes: "0"
+      pods: "0"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"events"}'
+      karpenter.sh/nodepool-hash: "580978404712501104"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:04Z"
+    generation: 2
+    labels:
+      node-group: events
+    name: events
+    resourceVersion: "680813440"
+    uid: d6c209f1-11dc-4fec-82fe-ccf4e540f7dd
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r7g.2xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: events
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "40"
+      ephemeral-storage: 262036380Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 323294300Ki
+      nodes: "5"
+      pods: "290"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"load-tests"}'
+      karpenter.sh/nodepool-hash: "4817735574026851685"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:02Z"
+    generation: 2
+    labels:
+      node-group: load-tests
+    name: load-tests
+    resourceVersion: "642155092"
+    uid: 31014c1b-3116-44ed-af99-741388500149
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r6a.2xlarge
+          - r5a.2xlarge
+          - r6i.2xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: load-tests
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "0"
+      ephemeral-storage: "0"
+      memory: "0"
+      nodes: "0"
+      pods: "0"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"logs"}'
+      karpenter.sh/nodepool-hash: "9584465460530466423"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:03Z"
+    generation: 2
+    labels:
+      node-group: logs
+    name: logs
+    resourceVersion: "680515801"
+    uid: 87a2944a-bc84-4ab0-aceb-05afccef7ef3
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r7g.2xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: logs
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "88"
+      ephemeral-storage: 576480036Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 711247460Ki
+      nodes: "11"
+      pods: "638"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"metrics"}'
+      karpenter.sh/nodepool-hash: "16299390499172371917"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:01Z"
+    generation: 2
+    labels:
+      node-group: metrics
+    name: metrics
+    resourceVersion: "678442742"
+    uid: 3b4c5480-5b66-474b-a308-f7b44d9735ec
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - c7g.2xlarge
+          - c7g.4xlarge
+          - m7g.2xlarge
+          - r7g.2xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: metrics
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "240"
+      ephemeral-storage: 1572218280Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 562612000Ki
+      nodes: "30"
+      pods: "2268"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"prometheus"}'
+      karpenter.sh/nodepool-hash: "16340278694561516645"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:04Z"
+    generation: 2
+    labels:
+      node-group: prometheus
+    name: prometheus
+    resourceVersion: "673330387"
+    uid: 24c9a720-b8c5-4b7b-854c-e5c7943e4d24
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: Never
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r6g.large
+          - r6g.xlarge
+          - r6g.2xlarge
+          - r6g.4xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: prometheus
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:57Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "48"
+      ephemeral-storage: 209629104Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 390720056Ki
+      nodes: "4"
+      pods: "584"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"proxies"}'
+      karpenter.sh/nodepool-hash: "2655559456225845346"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:05Z"
+    generation: 2
+    labels:
+      node-group: proxies
+    name: proxies
+    resourceVersion: "642155049"
+    uid: 6c9f7eca-f2fe-4e4e-b4d8-ede8036240e1
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - c7g.medium
+          - c7g.large
+          - c6g.large
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: proxies
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "0"
+      ephemeral-storage: "0"
+      memory: "0"
+      nodes: "0"
+      pods: "0"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"refinery"}'
+      karpenter.sh/nodepool-hash: "3884054616431368486"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:04Z"
+    generation: 2
+    labels:
+      node-group: refinery
+    name: refinery
+    resourceVersion: "680837423"
+    uid: 893692c9-0549-427a-97a8-fc85cceffb66
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - r6g.4xlarge
+          - m7g.xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: refinery
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "112"
+      ephemeral-storage: 366850932Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 912275756Ki
+      nodes: "7"
+      pods: "1638"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      karpenter.sh/nodepool-hash: "5614574634486832046"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T18:27:12Z"
+    generation: 1
+    labels:
+      node-group: slos
+    name: slos
+    resourceVersion: "670754191"
+    uid: 3fa848c0-5a6b-4ac7-a7d8-6fa2a4bfa940
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: karpenter.k8s.aws/instance-category
+          operator: NotIn
+          values:
+          - t
+        - key: karpenter.k8s.aws/instance-cpu
+          operator: Gt
+          values:
+          - "2"
+        - key: karpenter.k8s.aws/instance-memory
+          operator: Gt
+          values:
+          - "4"
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: slos
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T18:27:12Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T18:27:12Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T18:27:12Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "4"
+      ephemeral-storage: 52407276Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 7956912Ki
+      nodes: "1"
+      pods: "58"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"traces"}'
+      karpenter.sh/nodepool-hash: "3672609090965630544"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:03Z"
+    generation: 2
+    labels:
+      node-group: traces
+    name: traces
+    resourceVersion: "670825825"
+    uid: 6b0ac6c2-4a6e-462c-822e-df00f6366061
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: 1209600s
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values:
+          - c6gn.2xlarge
+          - c6gn.4xlarge
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: traces
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "224"
+      ephemeral-storage: 838516416Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 451209952Ki
+      nodes: "16"
+      pods: "3216"
+- apiVersion: karpenter.sh/v1
+  kind: NodePool
+  metadata:
+    annotations:
+      compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+      compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"victoria-metrics"}'
+      karpenter.sh/nodepool-hash: "3786101946780137123"
+      karpenter.sh/nodepool-hash-version: v3
+    creationTimestamp: "2024-09-18T13:46:01Z"
+    generation: 2
+    labels:
+      node-group: victoria-metrics
+    name: victoria-metrics
+    resourceVersion: "677076398"
+    uid: ca91ce49-2bec-4f8f-9757-ad8e6c19d00d
+  spec:
+    disruption:
+      budgets:
+      - nodes: 10%
+      consolidateAfter: 5m
+      consolidationPolicy: WhenEmptyOrUnderutilized
+    template:
+      metadata: {}
+      spec:
+        expireAfter: Never
+        nodeClassRef:
+          name: default
+          kind: KWOKNodeClass
+          group: karpenter.kwok.sh
+        requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+          - on-demand
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+          - arm64
+        - key: node-group
+          operator: Exists
+        taints:
+        - effect: NoSchedule
+          key: victoria-metrics
+          value: "true"
+  status:
+    conditions:
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: NodeClassReady
+      status: "True"
+      type: NodeClassReady
+    - lastTransitionTime: "2024-09-18T17:40:58Z"
+      message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2024-09-18T17:40:56Z"
+      message: ""
+      reason: ValidationSucceeded
+      status: "True"
+      type: ValidationSucceeded
+    resources:
+      cpu: "832"
+      ephemeral-storage: 1467403728Ki
+      hugepages-1Gi: "0"
+      hugepages-2Mi: "0"
+      hugepages-32Mi: "0"
+      hugepages-64Ki: "0"
+      memory: 5677408872Ki
+      nodes: "28"
+      pods: "8126"
+kind: List
+metadata:
+  resourceVersion: ""
+---
+apiVersion: karpenter.kwok.sh/v1alpha1
+kind: KWOKNodeClass
+metadata:
+  name: default

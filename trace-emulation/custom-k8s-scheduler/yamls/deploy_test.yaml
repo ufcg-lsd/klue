@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-scheduler
+  template:
+    metadata:
+      labels:
+        app: custom-scheduler
+    spec:
+      serviceAccountName: custom-scheduler
+      containers:
+      - name: custom-scheduler
+        image: brunogb123/custom-k8s-scheduler:0.1.11
+        imagePullPolicy: Always
+        args:
+        - "100000000"
+        command:
+        - sleep
