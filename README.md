@@ -1,15 +1,6 @@
 # 🚀 KLUE – A VTEX Lab Tool for Emulating Infrastructure and Workload  
 
-KLUE is a **cost-effective solution** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses. It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs efficiently.
-
----
-
-## 🎯 Why Use KLUE?
-✅ **Save Costs** – Avoid unnecessary cloud expenses by testing changes in a emulated environment.  
-✅ **Flexible and Modular** – Easily modify scenarios to experiment with different configurations and cloud-native tools.  
-✅ **Fast and Automated** – Deploy your emulated infrastructure with minimal effort.  
-✅ **Realistic Workload Emulation** – Test Kubernetes solutions under conditions that mirror production.  
-✅ **Internal Results Collector** – Automatically collect and analyze emulation results without additional setup.  
+KLUE is a **emulation tool** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses. It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs.
 
 ---
 
