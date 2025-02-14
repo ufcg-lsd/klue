@@ -71,6 +71,15 @@ There are multiple ways to run our emulation tool. One method is by using an **e
 ```
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --trace-path <trace-path>
 ```
+You can also create a **new cluster** with **one node**. To do that, you must have the roles set in your .env file:
+
+```
+./execute_emulation.sh --sim --new-cluster --trace-path <trace-path>
+```
+If you don't have sure about the flags, please use the following command:
+```
+./execute_emulation.sh --help
+```
 ---
 ## Exemplo de execução da ferramenta
 ![Demo do KLUE](assets/emulation-running.gif)
