@@ -84,8 +84,9 @@ If you are unsure about the flags, please use the following command:
 > **Note:** If you want to use our solution to generate the input files for the infrastructure and workload manager, please read the [README here](https://github.com/ufcg-lsd/klue/tree/main/trace-emulation/data#readme).
 
 ---
-## Exemplo de execução da ferramenta
+## 🧪 Example of Tool Execution  
 ![Demo do KLUE](assets/emulation-running.gif)
+
 ---
 
 ## 👥 Developed by VTEX Lab Members  
