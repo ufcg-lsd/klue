@@ -81,9 +81,15 @@ There are multiple ways to run our emulation tool. One method is by using an **e
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --trace-path <trace-path>
 ```
 ---
-## Exemplos de execução
+## Exemplo de execução da ferramenta
+![Demo do KLUE](assets/emulation-running.gif)
 ---
 
-## 👥 Developed By VTEX Labers  
-- **Geraldo Sobreira** - [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
-- **Kayky Fidelis** - [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
+## 👥 Developed by VTEX Lab Members  
+- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
+- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
+- **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)  
+
+## 👨‍🏫 Supervised by  
+- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
+- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  

@@ -4,8 +4,8 @@ PODS_AND_NODES_MAP="/tmp/pods_and_nodes_map.csv"
 
 cd ./custom-k8s-scheduler
 
-while [ ! -d "$PODS_AND_NODES_MAP" ]; do
-    echo "Aguardando o diretório $DIR ser criado..."
+while [ ! -f "$PODS_AND_NODES_MAP" ]; do
+    echo "Aguardando o arquivo $PODS_AND_NODES_MAP ser criado..."
     sleep 2
 done
 
