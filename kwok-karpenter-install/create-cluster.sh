@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Load env variables
 set -a
 source ../.env
@@ -44,7 +43,7 @@ if ! command_exists helm; then
 fi
 
 # Get and export the USERNAME of the user executing this script
-USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}')
+USERNAME=$(aws sts get-caller-identity --query 'Arn' --output text | awk -F'/' '{print $NF}' | sed -E 's/[_@].*//')
 export USERNAME
 
 # Create the EKS cluster from the file cluster-config.yaml
@@ -79,13 +78,3 @@ else
         exit 1
     fi
 fi
-
-cd karpenter-code
-
-make toolchain
-make build
-make install-kwok
-make apply
-kubectl get po -n kube-system
-
-kubectl apply -f ../configuration-files/nodepool.yaml

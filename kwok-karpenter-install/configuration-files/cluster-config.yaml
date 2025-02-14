@@ -6,10 +6,10 @@ metadata:
   region: us-east-1
 
 iam:
-  serviceRoleARN: arn:aws:iam::463020534911:role/eksctl-costplanner-cluster-ServiceRole-1QUD8QENCHW88
+  serviceRoleARN: ${SERVICE_ROLE_ARN}
 
 iamIdentityMappings:
-  - arn: arn:aws:iam::463020534911:role/AWSReservedSSO_SWE_05aa46cf18f9af02
+  - arn: ${CLUSTER_CREATION_ARN}
     username: admin-user1
     groups:
       - system:masters

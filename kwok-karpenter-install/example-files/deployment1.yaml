@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: exp1-deployment
+      annotations:
+        kwok.x-k8s.io/usage-cpu: 200m
     spec:
       containers:
       - name: exp1-container-a

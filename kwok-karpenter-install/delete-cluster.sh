@@ -10,31 +10,6 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to drain nodes and handle unevictable pods
-drain_nodes() {
-    echo "Draining nodes in the cluster $CLUSTER_NAME..."
-    NODE_NAMES=$(kubectl get nodes --no-headers | awk '{print $1}')
-    
-    for NODE in $NODE_NAMES; do
-        echo "Draining node $NODE..."
-        kubectl drain $NODE --ignore-daemonsets --delete-emptydir-data --force || true
-        
-        # Check for unevictable pods
-        UNEVICTABLE_PODS=$(kubectl get pods --all-namespaces --field-selector spec.nodeName=$NODE --no-headers | grep -vE "(Terminating|Completed)" || true)
-        
-        if [ -n "$UNEVICTABLE_PODS" ]; then
-            echo "Found unevictable pods on node $NODE:"
-            echo "$UNEVICTABLE_PODS"
-            
-            # Attempt to delete unevictable pods by namespace
-            echo "Attempting to force delete these pods..."
-            while read -r NAMESPACE POD_NAME; do
-                kubectl delete pod "$POD_NAME" --namespace "$NAMESPACE" --force --grace-period=0
-            done < <(echo "$UNEVICTABLE_PODS" | awk '{print $1, $2}')
-        fi
-    done
-}
-
 # Check for AWS CLI
 if ! command_exists aws; then
     echo "AWS CLI not found. Please install it and try again."
@@ -82,7 +57,7 @@ echo "Deleting SQS queue named $QUEUE_NAME..."
 QUEUE_URL=$(aws sqs list-queues --queue-name-prefix "$QUEUE_NAME" --region "$REGION" --output text | grep "$QUEUE_NAME") || true
 
 if [ -n "$QUEUE_URL" ]; then
-    aws sqs delete-queue --queue-url "$QUEUE_NAME" --region "$REGION"
+    aws sqs delete-queue --queue-url "$QUEUE_NAME" --region "$REGION" || true
     echo "Queue $QUEUE_NAME deleted successfully."
 else
     echo "Queue $QUEUE_NAME not found or already deleted."
@@ -92,15 +67,6 @@ fi
 echo "Uninstalling Karpenter..."
 helm uninstall karpenter --namespace $KARPENTER_NAMESPACE --timeout=60s || true
 kubectl delete namespace $KARPENTER_NAMESPACE --timeout=60s || true
-
-# List all nodes running on this cluster
-nodes=$(kubectl get nodes -o name)
-
-# Delete all nodes in the list of nodes
-for node in $nodes; do
-    echo "Deleting node $node"
-    kubectl delete $node
-done
 
 
 # Delete the EKS cluster using eksctl                                                                                                                                    
