@@ -104,6 +104,6 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh
     cd ../trace-emulation
-    ./run-emulation.sh --trace-path "$TRACE_PATH"
+    ./run-emulation.sh "$TRACE_PATH"
 fi
 
