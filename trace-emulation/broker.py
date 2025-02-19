@@ -1,25 +1,30 @@
 import json
-import subprocess
 import time
-import yaml
 import os
 from datetime import datetime
+from kubernetes import client
+from util.k8s_api.k8s_api import K8SAPI
 
 TRACE_STEP = 600
 
-# Carregando o JSON (substitua pelo caminho do arquivo JSON real)
+k8s_api = K8SAPI()
+
 with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
 
-# Função para verificar se o namespace existe
 def namespace_exists(namespace):
-    result = subprocess.run(['kubectl', 'get', 'namespace', namespace], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return result.returncode == 0
+    try:
+        k8s_api.read_namespace(name=namespace)
+        return True
+    except client.exceptions.ApiException as e:
+        if e.status == 404:
+            return False
+        raise
 
-# Função para criar o namespace se ele não existir
 def create_namespace_if_not_exists(namespace):
     if not namespace_exists(namespace):
-        subprocess.run(['kubectl', 'create', 'namespace', namespace])
+        body = client.V1Namespace(metadata=client.V1ObjectMeta(name=namespace))
+        k8s_api.create_namespace(body=body)
         print(f"Namespace {namespace} criado.")
     else:
         print(f"Namespace {namespace} já existe.")
@@ -29,148 +34,101 @@ def delete_path_if_exists(yaml_path):
     if os.path.exists(yaml_path):
         os.remove(yaml_path)
         print(f"{yaml_path} foi excluído com sucesso.")
-    else:
-        print(f"{yaml_path} não existe.")
 
-# Função genérica para aplicar um arquivo YAML no Kubernetes
-def apply_object(yaml_path):
-    subprocess.run(['kubectl', 'apply', '-f', yaml_path])
-    print(f"Objeto aplicado a partir de {yaml_path}")
+def apply_object(obj):
+    kind = obj.get("kind", "").lower()
+    namespace = obj["metadata"].get("namespace", "default")
+    name = obj["metadata"]["name"]
 
-def get_nodeclaim_as_dict(nodeclaim_name):
-    result = subprocess.run(
-        ["kubectl", "get", "nodeclaim", nodeclaim_name, "-o", "yaml"],
-        stdout=subprocess.PIPE,
-        text=True
-    )
-    return yaml.safe_load(result.stdout)
+    if kind == "deployment":
+        try:
+            k8s_api.read_namespaced_deployment(name, namespace)
+            k8s_api.patch_namespaced_deployment(name, namespace, obj)
+            print(f"Atualizado Deployment {name} no namespace {namespace}")
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                k8s_api.create_namespaced_deployment(namespace, obj)
+                print(f"Criado Deployment {name} no namespace {namespace}")
 
-def remove_ip_taint(nodeclaim_name):
-    nodeclaim_dict = get_nodeclaim_as_dict(nodeclaim_name)
-    taints = nodeclaim_dict["spec"].get("taints", [])
-    node_name = nodeclaim_dict["status"].get("nodeName")
+    elif kind == "nodeclaim":
+        try:
+            existing_nodeclaim = k8s_api.get_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", name)
+            obj["metadata"].pop("resourceVersion", None)
+            k8s_api.patch_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", name, obj)
+            print(f"Atualizado NodeClaim {name}")
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                obj["metadata"].pop("resourceVersion", None)
+                k8s_api.create_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", obj)
+                print(f"Criado NodeClaim {name}")
 
-    for taint in taints:
-        key = taint.get("key")
-        effect = taint.get("effect")
-        if key and effect and key.startswith("ip-"):
-            command = ["kubectl", "taint", "nodes", node_name, f"{key}:{effect}-"]
-            subprocess.run(command)
-
-def get_first_timestamp(data):
-    return data[0]["timestamp"]
-
-def change_nodepools_disruption_time(new_nodepools_disruption_time):
-    for nodepool, time in new_nodepools_disruption_time.items():
-        result = subprocess.run(
-            [
-                "kubectl", "patch", "nodepool", nodepool,
-                "--type=merge",
-                "-p", f'{{"spec":{{"disruption":{{"consolidateAfter":"{time}"}}}}}}'
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        ).stdout.strip()
-
-def get_disruption_time(nodepool_name):
-    result = subprocess.run(
-        ["kubectl", "get", "nodepool", nodepool_name, "-o", "jsonpath={.spec.disruption.consolidateAfter}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        ).stdout.strip()
-    return result
-
-# Função para rodar o setup inicial
 def exec_setup(setup):
-    # Aplicando nodeclaims
-    nodeclaims_path = f'/tmp/all_nodeclaims.yaml'
     for nodeclaim in setup['nodeclaims']:
-        with open(nodeclaims_path, 'a') as f:
-            yaml.dump(nodeclaim, f, default_flow_style=False)
-            f.write("---\n")
-    apply_object(nodeclaims_path)
+        apply_object(nodeclaim)
 
-    # Aplicando deployments
-    for namespace in setup['deployments']:
+    for namespace, pods in setup['deployments'].items():
         create_namespace_if_not_exists(namespace)
-        yaml_path = f'/tmp/{namespace}_setup.yaml'
-        for pod in setup['deployments'][namespace]:
-            with open(yaml_path, 'a') as f:
-                yaml.dump(pod, f, default_flow_style=False)
-                f.write("---\n")
-        apply_object(yaml_path)
+        for pod in pods:
+            apply_object(pod)
 
-# Função para executar o trace, aplicando e deletando pods conforme o timestamp
 def exec_trace(trace):
-    step = 30
-    current_timestamp = get_first_timestamp(trace)
+    current_timestamp = trace[0]["timestamp"]
     start = datetime.now()
     time.sleep(TRACE_STEP)
 
     for entry in trace:
         entry_timestamp = entry['timestamp']
         if entry_timestamp > current_timestamp:
-            print(f"Vou dormir {entry_timestamp - current_timestamp} segundos")
             time.sleep(entry_timestamp - current_timestamp)
             current_timestamp = entry_timestamp
 
-        # Processando applied_objects
-        for namespace in entry['applied_objects']:
+        # Aplicar novos objetos
+        for namespace, objects in entry['applied_objects'].items():
             create_namespace_if_not_exists(namespace)
-            yaml_path = f'/tmp/{namespace}_execution.yaml'
-            delete_path_if_exists(yaml_path)
-            for object in entry['applied_objects'][namespace]:
-                with open(yaml_path, 'a') as f:
-                    yaml.dump(object, f, default_flow_style=False)
-                    f.write("---\n")
-            apply_object(yaml_path)
+            for obj in objects:
+                apply_object(obj)
 
-        # Processando scaled_replicasets
-        for object in entry['scaled_replicasets']:
-            name = object['name']
-            namespace = object['namespace']
-            pods = object['pods']
-            kind = object['kind']
-            # Esse if é só para não executar scalling dos daemonsets, statefulsets e jobs
-            if kind == 'deployment' or kind ==  'statefulset':
-                # kubectl scale <tipo-do-recurso>/<nome> --replicas=<quantidade> -n <namespace>
-                subprocess.run(['kubectl', 'scale', f'deployment/{name}', f'--replicas={pods}', '-n', namespace])
-                print(f"Replicaset {name} sofreu operação de scalling para {pods} no namespace {namespace}")
+        # Processar escalonamento de réplicas
+        for obj in entry['scaled_replicasets']:
+            name, namespace, replicas, kind = obj['name'], obj['namespace'], obj['pods'], obj['kind']
+            if kind == "deployment":
+                k8s_api.patch_namespaced_deployment_scale(name, namespace, {"spec": {"replicas": replicas}})
+            elif kind == "statefulset":
+                k8s_api.patch_namespaced_stateful_set_scale(name, namespace, {"spec": {"replicas": replicas}})
+            print(f"Escalado {kind} {name} para {replicas} réplicas no namespace {namespace}")
 
-        # Processando deleted_objects
-        for object in entry['deleted_objects']:
-            pod_name = object['name']
-            namespace = object['namespace']
-            subprocess.run(['kubectl', 'delete', 'deployment', pod_name, '-n', namespace])
-            print(f"Deployment {pod_name} deletado no namespace {namespace}")
+        # Deletar objetos
+        for obj in entry['deleted_objects']:
+            name, namespace = obj['name'], obj['namespace']
+            k8s_api.delete_namespaced_deployment(name, namespace)
+            print(f"Deployment {name} deletado no namespace {namespace}")
 
     duration = int((datetime.now() - start).total_seconds() + 15)
-    port_forward = subprocess.Popen(["bash", "port-forward.sh"])
-    time.sleep(10)
-    collector = subprocess.Popen(['python3', 'collector.py', f"{duration}", f"{step}"])
+    os.system(f"python3 collector.py {duration} 30")
 
-all_nodepools = subprocess.run(
-    ["kubectl", "get", "nodepools", "-o", "custom-columns=NAME:.metadata.name", "--no-headers"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        check=True
-    ).stdout.strip().split("\n")
+# Obtendo NodePools
+all_nodepools = [
+    item["metadata"]["name"]
+    for item in k8s_api.list_cluster_custom_object("karpenter.sh", "v1", "nodepools")["items"]
+]
 
-first_disruption_time = {}
-new_disruption_time = {}
+first_disruption_time = {np: k8s_api.get_cluster_custom_object("karpenter.sh", "v1", "nodepools", np)["spec"]["disruption"]["consolidateAfter"] for np in all_nodepools}
+new_disruption_time = {np: "6000m" for np in all_nodepools}
 
-for nodepool in all_nodepools:
-    first_disruption_time[nodepool] = get_disruption_time(nodepool)
-    new_disruption_time[nodepool] = "6000m"
+# Atualizando tempo de interrupção
+for nodepool, time_value in new_disruption_time.items():
+    patch = {"spec": {"disruption": {"consolidateAfter": time_value}}}
+    k8s_api.patch_cluster_custom_object("karpenter.sh", "v1", "nodepools", nodepool, patch)
 
-change_nodepools_disruption_time(new_disruption_time)
 exec_setup(data['setup'])
-subprocess.run(["python3", "pods_mapping.py"])
-subprocess.run(["bash", "build-scheduler.sh"])
-change_nodepools_disruption_time(first_disruption_time)
+
+# Executando scripts externos
+os.system("python3 pods_mapping.py")
+os.system("bash build-scheduler.sh")
+
+# Restaurando tempo de interrupção original
+for nodepool, time_value in first_disruption_time.items():
+    patch = {"spec": {"disruption": {"consolidateAfter": time_value}}}
+    k8s_api.patch_cluster_custom_object("karpenter.sh", "v1", "nodepools", nodepool, patch)
+
 exec_trace(data['trace'])

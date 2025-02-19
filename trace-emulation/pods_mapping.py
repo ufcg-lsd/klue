@@ -1,19 +1,19 @@
 import pandas as pd
-from util.k8s_api.k8s_client import K8SClient
+from util.k8s_api.k8s_api import K8SAPI
 import re
 
 PODS_ALLOCATION_PATH = "/tmp/pods_allocation.csv"
 
 pods_allocation = pd.read_csv(PODS_ALLOCATION_PATH)
 
-k8s_client = K8SClient()
+k8s_api = K8SAPI()
 
-def get_fake_nodes_dict(k8s_client: K8SClient):
+def get_fake_nodes_dict(k8s_api: K8SAPI):
     print("\nFetching cluster nodes with node pool and instance type:")
 
     node_data = {}
 
-    nodes = k8s_client.list_node()
+    nodes = k8s_api.list_node()
     real_node_regex = r"^ip-\d{3}-\d{2}-\d{2}-\d{3}\..*"
     
     for node in nodes.items:
@@ -46,10 +46,10 @@ def get_real_nodes_dict(pods_allocation: pd.DataFrame):
     return node_data
 
 
-def get_owners_with_pods(k8s_client: K8SClient):
+def get_owners_with_pods(k8s_api: K8SAPI):
     owners_with_pods = {}
 
-    pods = k8s_client.list_pod_for_all_namespaces()
+    pods = k8s_api.list_pod_for_all_namespaces()
 
     for pod in pods.items:
         owner_name = pod.metadata.labels.get('deployment')  
@@ -62,9 +62,10 @@ def get_owners_with_pods(k8s_client: K8SClient):
     return owners_with_pods
 
 def map_fake_and_real_nodes(fake_nodes_dict, real_nodes_dict, pods_allocation):
+    print(fake_nodes_dict)
     for real_instance_type, real_nodes in real_nodes_dict.items():
         if real_instance_type not in fake_nodes_dict:
-            print(f"Instância {real_instance_type} não foi encontrada no cluster real")
+            print(f"Instância {real_instance_type} não foi encontrada no cluster emulado")
             exit()
 
         for real_node in real_nodes:
@@ -104,12 +105,12 @@ def map_pods_and_nodes(pods_allocation, replicaset_pod_dict):
     return result_df
 
     
-fake_nodes_dict = get_fake_nodes_dict(k8s_client)
+fake_nodes_dict = get_fake_nodes_dict(k8s_api)
 real_nodes_dict = get_real_nodes_dict(pods_allocation)
 
 map_fake_and_real_nodes(fake_nodes_dict, real_nodes_dict, pods_allocation)
 
-pod_owners = get_owners_with_pods(k8s_client)
+pod_owners = get_owners_with_pods(k8s_api)
 
 print(pod_owners)
 
