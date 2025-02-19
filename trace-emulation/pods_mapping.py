@@ -62,7 +62,6 @@ def get_owners_with_pods(k8s_api: K8SAPI):
     return owners_with_pods
 
 def map_fake_and_real_nodes(fake_nodes_dict, real_nodes_dict, pods_allocation):
-    print(fake_nodes_dict)
     for real_instance_type, real_nodes in real_nodes_dict.items():
         if real_instance_type not in fake_nodes_dict:
             print(f"Instância {real_instance_type} não foi encontrada no cluster emulado")
