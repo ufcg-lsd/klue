@@ -89,6 +89,12 @@ df_final = df_final[~df_final['owner_kind'].isin(['DaemonSet', 'Job'])]
 
 print(df_final[df_final['timestamp'] == df_final['timestamp'].min()]['pod'].nunique())
 
+all_nodes = df_final['node'].unique()
+
+all_nodes_df = pd.DataFrame(all_nodes, columns=["node"])
+
+all_nodes_df.to_csv("/tmp/all_nodes.csv", index=False)
+
 df_pods_allocation = df_final[df_final['timestamp'] == df_final['timestamp'].min()]
 df_pods_allocation = df_pods_allocation.groupby(['namespace', 'node', 'nodepool', 'replicaset', 'owner_kind', 'instance_type']).agg(
     pods_count=('replicaset', 'count'),

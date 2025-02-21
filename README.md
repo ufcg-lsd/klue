@@ -45,12 +45,12 @@ To create your emulated cluster, you first need **access to AWS** and must insta
 | `CALICO_NAMESPACE`      | Namespace to install Calico |
 
 Once you have these dependencies installed, copy the `env.example` file to your `.env` using:
-```
+```bash
 cp .env.example .env
 ```
 
 After this, init the submodule repositories `prometheus` and `karpenter-code` using
-```
+```bash
 git submodule update --init --recursive
 ```
 ---
@@ -62,27 +62,31 @@ Please visit the `README.md` in `trace-emulator/data` to understand how your fil
 ### 🔑 Grant Execution Permission  
 Before running an emulation, grant execution permission to the **execute_emulation.sh** file by running:
 
-```
+```bash
 chmod +x execute_emulation.sh
 ```
-### ▶️ Run the Execution Manager  
+### ▶️ Running the Execution Manager  
 There are multiple ways to run our emulation tool. One method is by using an **existing cluster** with at least **one node**:
 
-```
+```bash
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --trace-path <trace-path>
 ```
 You can also create a **new cluster** with **one node**. To do that, you must have the roles set in your .env file:
 
-```
+```bash
 ./execute_emulation.sh --sim --new-cluster --trace-path <trace-path>
 ```
-If you don't have sure about the flags, please use the following command:
-```
+If you are unsure about the flags, please use the following command:
+```bash
 ./execute_emulation.sh --help
 ```
+
+> **Note:** If you want to use our solution to generate the input files for the infrastructure and workload manager, please read the [README here](https://github.com/ufcg-lsd/klue/tree/main/trace-emulation/data#readme).
+
 ---
-## Exemplo de execução da ferramenta
+## 🧪 Example of Tool Execution  
 ![Demo do KLUE](assets/emulation-running.gif)
+
 ---
 
 ## 👥 Developed by VTEX Lab Members  
