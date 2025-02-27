@@ -5,6 +5,7 @@ from datetime import datetime
 from kubernetes import client
 from util.k8s_api.k8s_api import K8SAPI
 import subprocess
+import pandas as pd
 
 TRACE_STEP = 600
 
@@ -12,6 +13,8 @@ k8s_api = K8SAPI()
 
 with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
+
+df = pd.read_csv("/tmp/final_trace.csv")
 
 def namespace_exists(namespace):
     try:
@@ -107,7 +110,19 @@ def exec_trace(trace):
     duration = int((datetime.now() - start).total_seconds() + 15)
     os.system(f"python3 collector.py {duration} 30")
 
-# Obtendo NodePools
+def count_pods_excluding_namespaces():
+    excluded_namespaces = ["monitoring", "kube-system"]
+
+    pods = k8s_api.list_pod_for_all_namespaces()
+
+    pod_count = 0
+
+    for pod in pods.items:
+        if pod.metadata.namespace not in excluded_namespaces:
+            pod_count += 1
+
+    return pod_count
+
 all_nodepools = [
     item["metadata"]["name"]
     for item in k8s_api.list_cluster_custom_object("karpenter.sh", "v1", "nodepools")["items"]
@@ -116,14 +131,26 @@ all_nodepools = [
 first_disruption_time = {np: k8s_api.get_cluster_custom_object("karpenter.sh", "v1", "nodepools", np)["spec"]["disruption"]["consolidateAfter"] for np in all_nodepools}
 new_disruption_time = {np: "6000m" for np in all_nodepools}
 
-# Atualizando tempo de interrupção
 for nodepool, time_value in new_disruption_time.items():
     patch = {"spec": {"disruption": {"consolidateAfter": time_value}}}
     k8s_api.patch_cluster_custom_object("karpenter.sh", "v1", "nodepools", nodepool, patch)
 
 exec_setup(data['setup'])
 
-# Executando scripts externos
+first_timestamp = df['timestamp'].min()
+filtered_df = df[df['timestamp'] == first_timestamp]
+
+total_setup_pods = filtered_df['pods'].sum()
+total_pods_now = count_pods_excluding_namespaces()
+
+print(f"setup:{total_setup_pods}")
+print(f"now:{total_pods_now}")
+
+while(total_pods_now != total_setup_pods):
+    total_pods_now = count_pods_excluding_namespaces()
+    print(f"now: {total_pods_now}")
+    time.sleep(2)
+
 subprocess.run(["python3", "pods_mapping.py"])
 subprocess.Popen(["bash", "build-scheduler.sh"])
 
