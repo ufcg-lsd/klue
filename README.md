@@ -1,24 +1,25 @@
-# 🚀 KLUE – A VTEX Lab Tool for Emulating Infrastructure and Workload  
+# 🚀 KLUE – A VTEX Lab Tool for Emulating Infrastructure and Workload
 
 KLUE is a **emulation tool** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses. It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs.
 
 ---
 
-## 🛠 Installation Guide  
-Before testing your solutions and configurations, follow these steps to properly set up your environment.  
+## 🛠 Installation Guide
+Before testing your solutions and configurations, follow these steps to properly set up your environment.
 
-### 📌 Install Dependencies  
+### 📌 Install Dependencies
 To create your emulated cluster, you first need **access to AWS** and must install the required dependencies:
 
-1. **EKSCTL** – Follow this [installation guide](https://eksctl.io/installation/)  
-2. **KUBECTL** – Install via this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)  
-3. **AWS CLI** – Install using [this guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)  
-4. **HELM** – Kubernetes package manager, install via [this guide](https://helm.sh/docs/intro/install/)  
-5. **AWS SSO Configuration** – Follow [this tutorial](https://pushkar-sre.medium.com/how-to-set-up-aws-cli-with-aws-single-sign-on-sso-acf4dd88e056) to configure your default profile  
+1. **EKSCTL** – Follow this [installation guide](https://eksctl.io/installation/)
+2. **KUBECTL** – Install via this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+3. **AWS CLI** – Install using [this guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+4. **HELM** – Kubernetes package manager, install via [this guide](https://helm.sh/docs/intro/install/)
+5. **AWS SSO Configuration** – Follow [this tutorial](https://pushkar-sre.medium.com/how-to-set-up-aws-cli-with-aws-single-sign-on-sso-acf4dd88e056) to configure your default profile
+6. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
 
 ---
 
-### 📌 Environment Variables  
+### 📌 Environment Variables
 
 | **Variable**              | **Description** |
 |---------------------------|---------------|
@@ -54,18 +55,18 @@ After this, init the submodule repositories `prometheus` and `karpenter-code` us
 git submodule update --init --recursive
 ```
 ---
-## 🚀 Executing the Emulation Tool  
+## 🚀 Executing the Emulation Tool
 
-### 📂 Ensure Your Entry Files Are in the `data` Directory  
-Please visit the `README.md` in `trace-emulator/data` to understand how your files should be structured.  
+### 📂 Ensure Your Entry Files Are in the `data` Directory
+Please visit the `README.md` in `trace-emulator/data` to understand how your files should be structured.
 
-### 🔑 Grant Execution Permission  
+### 🔑 Grant Execution Permission
 Before running an emulation, grant execution permission to the **execute_emulation.sh** file by running:
 
 ```bash
 chmod +x execute_emulation.sh
 ```
-### ▶️ Running the Execution Manager  
+### ▶️ Running the Execution Manager
 There are multiple ways to run our emulation tool. One method is by using an **existing cluster** with at least **one node**:
 
 ```bash
@@ -84,16 +85,34 @@ If you are unsure about the flags, please use the following command:
 > **Note:** If you want to use our solution to generate the input files for the infrastructure and workload manager, please read the [README here](https://github.com/ufcg-lsd/klue/tree/main/trace-emulation/data#readme).
 
 ---
-## 🧪 Example of Tool Execution  
+## 🧪 Example of Tool Execution
 ![Demo do KLUE](assets/emulation-running.gif)
 
 ---
+## ⚠️ Important Precautions
 
-## 👥 Developed by VTEX Lab Members  
-- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
-- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
-- **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)  
+When running the emulation multiple times on the same cluster, that are **three main steps** needed for guaranteeing that you will have a correct execution, these are:
 
-## 👨‍🏫 Supervised by  
-- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
-- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
+- **Removing all nodepools:**
+```bash
+kubectl delete nodepools --all
+```
+
+- **Cleaning the /tmp:**
+```bash
+rm /tmp/*.csv
+```
+
+- **Deleting all deployments:**
+```bash
+kubectl delete deployments -A --all
+```
+---
+## 👥 Developed by VTEX Lab Members
+- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)
+- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)
+- **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)
+
+## 👨‍🏫 Supervised by
+- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**
+- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**
