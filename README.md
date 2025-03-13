@@ -64,7 +64,7 @@ Please visit the `README.md` in `trace-emulator/data` to understand how your fil
 Before running an emulation, grant execution permission to the **execute_emulation.sh** file by running:
 
 ```bash
-chmod +x execute_emulation.sh
+chmod +x execute-emulation.sh
 ```
 ### ▶️ Running the Execution Manager
 There are multiple ways to run our emulation tool. One method is by using an **existing cluster** with at least **one node**:
