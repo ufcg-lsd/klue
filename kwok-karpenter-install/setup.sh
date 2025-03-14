@@ -4,14 +4,14 @@ source ~/.bashrc
 
 # Setup Prometheus and Grafana
 
-kubectl create namespace monitoring
+helm install prometheus prometheus-community/kube-prometheus-stack -f values.yaml --namespace kube-system
 
-kubectl apply --server-side -f kube-prometheus/manifests/setup
-kubectl wait \
-	--for condition=Established \
-	--all CustomResourceDefinition \
-	--namespace=monitoring
-kubectl apply -f kube-prometheus/manifests/
+#kubectl apply --server-side -f kube-prometheus/manifests/setup
+#kubectl wait \
+#	--for condition=Established \
+#	--all CustomResourceDefinition \
+#	--namespace=monitoring
+#kubectl apply -f kube-prometheus/manifests/
 
 cd karpenter-code
 
@@ -26,9 +26,9 @@ kubectl get po -A
 cd ..
 
 kubectl apply -f configuration-files/karpenter-servicemonitor.yml
-./install-kwok.sh
+#./install-kwok.sh
 
-while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
+while [[ $(kubectl get pod prometheus-prometheus-kube-prometheus-prometheus-0 -n kube-system -o jsonpath='{.status.phase}') != "Running" ]]; do
   sleep 5
 done
 

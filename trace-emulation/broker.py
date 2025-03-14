@@ -14,7 +14,6 @@ k8s_api = K8SAPI()
 with open('/tmp/output_objects.json', 'r') as file:
     data = json.load(file)
 
-df = pd.read_csv("/tmp/final_trace.csv")
 
 def namespace_exists(namespace):
     try:
@@ -108,6 +107,8 @@ def exec_trace(trace):
             print(f"Deployment {name} deletado no namespace {namespace}")
 
     duration = int((datetime.now() - start).total_seconds() + 15)
+
+    subprocess.run(["bash","port-forward.sh"])
     os.system(f"python3 collector.py {duration} 30")
 
 def count_pods_excluding_namespaces():
@@ -137,10 +138,12 @@ for nodepool, time_value in new_disruption_time.items():
 
 exec_setup(data['setup'])
 
-first_timestamp = df['timestamp'].min()
-filtered_df = df[df['timestamp'] == first_timestamp]
+total_setup_pods = 0
 
-total_setup_pods = filtered_df['pods'].sum()
+for i in data['setup']['deployments'].keys():
+    for j in range(len(data['setup']['deployments'][i])):
+        total_setup_pods += data['setup']['deployments'][i][j]['spec']['replicas']
+
 total_pods_now = count_pods_excluding_namespaces()
 
 print(f"setup:{total_setup_pods}")
