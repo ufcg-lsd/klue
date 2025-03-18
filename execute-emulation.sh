@@ -2,7 +2,7 @@
 
 # Função para exibir a ajuda
 usage() {
-    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--trace-path PATH]"
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--trace-path PATH] [--nodepool-path PATH]"
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
@@ -10,6 +10,7 @@ usage() {
     echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
     echo "  --new-cluster         Criar um novo cluster"
     echo "  --trace-path PATH     Especificar o caminho do trace a ser usado na emulação"
+    echo "  --nodepool-path PATH  Especificar o caminho do nodepool a ser usado na emulação"
     echo "  -h, --help            Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -34,6 +35,7 @@ ENVIRONMENT=""
 CLUSTER_ACTION=""
 CLUSTER_CONTEXT=""
 TRACE_PATH=""
+NODEPOOL_PATH=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -58,6 +60,10 @@ while [[ $# -gt 0 ]]; do
             TRACE_PATH="$2"
             shift 2
             ;;
+        --nodepool-path)
+            NODEPOOL_PATH="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             ;;
@@ -79,8 +85,8 @@ if [[ $CLUSTER_ACTION == "use" && -z $CLUSTER_CONTEXT ]]; then
     usage
 fi
 
-if [[ $ENVIRONMENT == "emulation" && -z $TRACE_PATH ]]; then
-    echo "Erro: É necessário especificar --trace-path ao usar --sim."
+if [[ $ENVIRONMENT == "emulation" && (-z $TRACE_PATH || -z $NODEPOOL_PATH) ]]; then
+    echo "Erro: São necessários especificar --trace-path e --nodepool-path ao usar --sim."
     usage
 fi
 
@@ -104,6 +110,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh
     cd ../trace-emulation
-    ./run-emulation.sh "$TRACE_PATH"
+    ./run-emulation.sh "$TRACE_PATH" "$NODEPOOL_PATH"
 fi
-
