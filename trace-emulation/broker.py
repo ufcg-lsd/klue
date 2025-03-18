@@ -100,16 +100,16 @@ def exec_trace(trace):
                 k8s_api.patch_namespaced_stateful_set_scale(name, namespace, {"spec": {"replicas": replicas}})
             print(f"Escalado {kind} {name} para {replicas} réplicas no namespace {namespace}")
 
-        # Deletar objetos
+    duration = int((datetime.now() - start).total_seconds() + 15)
+
+    subprocess.run(["bash","port-forward.sh"])
+    subprocess.run(["python3", "collector.py", "duration", "30"])
+
+    for entry in trace:
         for obj in entry['deleted_objects']:
             name, namespace = obj['name'], obj['namespace']
             k8s_api.delete_namespaced_deployment(name, namespace)
             print(f"Deployment {name} deletado no namespace {namespace}")
-
-    duration = int((datetime.now() - start).total_seconds() + 15)
-
-    subprocess.run(["bash","port-forward.sh"])
-    os.system(f"python3 collector.py {duration} 30")
 
 def count_pods_excluding_namespaces():
     excluded_namespaces = ["monitoring", "kube-system"]

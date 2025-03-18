@@ -11,3 +11,5 @@ vtex-collector
 trace-emulation/data/*.csv
 
 trace-emulation/custom-k8s-scheduler/custom-scheduler
+
+trace-emulation/output*
