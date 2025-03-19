@@ -7,7 +7,7 @@ from util.k8s_api.k8s_api import K8SAPI
 import subprocess
 import pandas as pd
 
-TRACE_STEP = 600
+TRACE_STEP = 300
 
 k8s_api = K8SAPI()
 
@@ -31,6 +31,12 @@ def create_namespace_if_not_exists(namespace):
         print(f"Namespace {namespace} criado.")
     else:
         print(f"Namespace {namespace} já existe.")
+
+def count_nodeclaims_in_setup(data):
+    """ Count the number of nodeclaims in the setup part of the data. """
+    setup = data.get('setup', {})
+    nodeclaims = setup.get('nodeclaims', [])
+    return len(nodeclaims)
 
 def delete_path_if_exists(yaml_path):
     """Remove o arquivo se ele existir no caminho fornecido."""
@@ -65,9 +71,27 @@ def apply_object(obj):
                 k8s_api.create_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", obj)
                 print(f"Criado NodeClaim {name}")
 
+
+nodeclaims_count = count_nodeclaims_in_setup(data)  # This is fine, you're calculating it before
+
+nodes = k8s_api.list_node()
+global node_count
+node_count = len(nodes.items)
+
+print(nodeclaims_count)
+print(node_count)
+
 def exec_setup(setup):
+    global nodeclaims_count, node_count  # Ensure they are treated as global variables
+
     for nodeclaim in setup['nodeclaims']:
         apply_object(nodeclaim)
+
+    while nodeclaims_count != node_count:
+        nodes = k8s_api.list_node()
+        node_count = len(nodes.items)
+        print(f"Node count: {node_count}")
+        time.sleep(2)
 
     for namespace, pods in setup['deployments'].items():
         create_namespace_if_not_exists(namespace)
@@ -103,7 +127,7 @@ def exec_trace(trace):
     duration = int((datetime.now() - start).total_seconds() + 15)
 
     subprocess.run(["bash","port-forward.sh"])
-    subprocess.run(["python3", "collector.py", "duration", "30"])
+    subprocess.run(["python3", "collector.py", str(duration), "30"])
 
     for entry in trace:
         for obj in entry['deleted_objects']:
