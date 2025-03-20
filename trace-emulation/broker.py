@@ -71,10 +71,12 @@ def apply_object(obj):
                 k8s_api.create_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", obj)
                 print(f"Criado NodeClaim {name}")
 
+global amount_of_real_nodes
+amount_of_real_nodes = 1
 
 nodeclaims_count = count_nodeclaims_in_setup(data)  # This is fine, you're calculating it before
 
-nodes = k8s_api.list_node()
+nodes = k8s_api.list_node() - amount_of_real_nodes
 global node_count
 node_count = len(nodes.items)
 
@@ -82,13 +84,13 @@ print(nodeclaims_count)
 print(node_count)
 
 def exec_setup(setup):
-    global nodeclaims_count, node_count  # Ensure they are treated as global variables
+    global nodeclaims_count, node_count, amount_of_real_nodes
 
     for nodeclaim in setup['nodeclaims']:
         apply_object(nodeclaim)
 
     while nodeclaims_count != node_count:
-        nodes = k8s_api.list_node()
+        nodes = k8s_api.list_node() - amount_of_real_nodes
         node_count = len(nodes.items)
         print(f"Node count: {node_count}")
         time.sleep(2)
