@@ -1,8 +1,14 @@
 from kubernetes import client, config
 
 class K8SAPI:
-    def __init__(self):
+    def __init__(self, timeout=120):
         config.load_kube_config()
+        
+        # Get the default AWS configuration and set the timeout of a request
+        configuration = client.Configuration.get_default_copy()
+        configuration.timeout_seconds = timeout
+        client.Configuration.set_default(configuration)
+
         self.v1 = client.CoreV1Api()
         self.apps_v1 = client.AppsV1Api()
         self.custom_api = client.CustomObjectsApi()
