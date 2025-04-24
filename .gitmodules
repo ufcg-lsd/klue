@@ -1,6 +1,6 @@
 [submodule "kwok-karpenter-install/karpenter-code"]
 	path = kwok-karpenter-install/karpenter-code
-	url = git@github.com:vtex-lab/karpenter-code.git
+	url = https://github.com/vtex-lab/karpenter-code.git
 [submodule "kwok-karpenter-install/kube-prometheus"]
 	path = kwok-karpenter-install/kube-prometheus
 	url = https://github.com/prometheus-operator/kube-prometheus.git
