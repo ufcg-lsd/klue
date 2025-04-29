@@ -110,5 +110,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh
     cd ../trace-emulation
-    ./run-emulation.sh "$TRACE_PATH" "$NODEPOOL_PATH"
+    python3 run-emulation.py "$TRACE_PATH" "$NODEPOOL_PATH"
 fi
