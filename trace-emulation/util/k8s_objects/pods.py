@@ -6,13 +6,13 @@ class PodsGenerator:
     
     def put_cpu_unity(self, value):
         """
-        Converte o valor de CPU para milicores (m) e retorna como string.
+        Converts the CPU value to millicores (m) and returns it as a string.
         """
         return f"{int(float(value) * 1000)}m"
 
     def put_memory_unity(self, value):
         """
-        Converte o valor de memória de bytes para MiB e retorna como string.
+        Converts the memory value from bytes to MiB and returns it as a string.
         """
         mebibytes = int(value) // (2 ** 20)
         return f"{mebibytes}Mi"

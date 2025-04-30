@@ -1,3 +1,8 @@
+"""
+K8SAPI is a utility class for interacting with the Kubernetes API. It provides
+methods for managing nodes, namespaces, pods, deployments, stateful sets, and
+custom resources, allowing for streamlined Kubernetes resource operations.
+"""
 from kubernetes import client, config
 
 class K8SAPI:

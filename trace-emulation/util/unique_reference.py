@@ -1,3 +1,8 @@
+"""
+UniqueReferenceGenerator is a utility class for generating unique references,
+including names and UUIDs. It ensures that the generated references are unique
+by maintaining sets of previously generated names and UUIDs.
+"""
 import random
 import string
 import uuid

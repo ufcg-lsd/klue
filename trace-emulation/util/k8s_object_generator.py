@@ -1,3 +1,9 @@
+"""
+K8SObjectGenerator is a utility class for generating various Kubernetes objects,
+including NodeClaims, Deployments, StatefulSets, and Jobs. It provides methods
+to create these objects based on input data and group information, enabling
+dynamic and automated Kubernetes resource management.
+"""
 import pandas as pd
 from util.k8s_objects.nodeclaim_generator import NodeClaimGenerator
 from util.k8s_objects.deployments_generator import DeploymentsGenerator

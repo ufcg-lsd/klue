@@ -1,13 +1,33 @@
+"""
+NodeClaimGenerator is a utility class for generating Kubernetes NodeClaim objects
+based on input data. It provides methods to retrieve NodePool information and
+generate NodeClaim specifications with appropriate metadata, labels, and resource
+requirements.
+"""
 import yaml
 import subprocess
 from datetime import datetime, timezone
 from util.unique_reference import UniqueReferenceGenerator
 
 class NodeClaimGenerator:
+    """
+    A class responsible for generating NodeClaim objects for Kubernetes clusters.
+    This class interacts with Kubernetes resources, such as NodePools, to gather
+    necessary information and generate NodeClaim objects. These objects are used
+    to emulate nodes in a Kubernetes cluster, providing metadata, specifications,
+    and status information.
+    """
     def __init__(self):
+        """
+        Initializes the NodeClaimGenerator with a reference generator for unique
+        names and UUIDs.
+        """
         self.reference_generator = UniqueReferenceGenerator()
 
     def get_nodepool_info(self, nodepool_name, instance_name):
+        """
+        Retrieves information about a specific NodePool in the Kubernetes cluster.
+        """
         try:
             result = subprocess.run(
                 ["kubectl", "get", "nodepool", nodepool_name, "-o", "yaml"],
@@ -55,6 +75,12 @@ class NodeClaimGenerator:
             return None
 
     def generate_nodeclaim(self, instance_name, instance_data, nodepool_name):
+        """
+        Generates a NodeClaim object based on the provided instance name, instance data,
+        and NodePool name. This method retrieves the necessary information from the
+        Kubernetes cluster and constructs a NodeClaim object with appropriate metadata,
+        labels, and resource requirements.
+        """
         nodepool_info = self.get_nodepool_info(nodepool_name, instance_name)
         instance_info = next((item for item in instance_data if item["name"] == instance_name), None)
         

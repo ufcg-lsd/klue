@@ -1,3 +1,9 @@
+"""
+DeploymentsGenerator is a utility class for generating Kubernetes deployment objects
+based on input data from a pandas DataFrame. It provides methods to create, delete,
+and scale deployments, as well as to format CPU and memory resource values.
+Converts the CPU value to millicores (m) and returns it as a string.
+"""
 import pandas as pd
 
 class DeploymentsGenerator:
@@ -6,20 +12,20 @@ class DeploymentsGenerator:
 
     def put_cpu_unity(self, value):
         """
-        Converte o valor de CPU para milicores (m) e retorna como string.
+        Converts the CPU value to millicores (m) and returns it as a string.
         """
         return f"{int(float(value) * 1000)}m"
 
     def put_memory_unity(self, value):
         """
-        Converte o valor de memória de bytes para MiB e retorna como string.
+        Converts the memory value from bytes to MiB and returns it as a string.
         """
         mebibytes = int(value) // (2 ** 20)
         return f"{mebibytes}Mi"
 
     def generate_applied_deployments(self, group: pd.DataFrame):
         """
-        Gera um dicionário de deployments aplicados com base nas linhas do DataFrame.
+        Generates a dictionary of applied deployments based on the rows of the DataFrame.
         """
         applied_deployments = {}
 
@@ -100,7 +106,7 @@ class DeploymentsGenerator:
 
     def generate_deleted_deployments(self, group: pd.DataFrame):
         """
-        Gera uma lista de deployments a serem deletados com base nas linhas do DataFrame.
+        Generates a list of deployments to be deleted based on the rows of the DataFrame.
         """
         deleted_deployments = []
 
@@ -112,7 +118,7 @@ class DeploymentsGenerator:
 
     def generate_scaled_deployments(self, group: pd.DataFrame):
         """
-        Gera uma lista de replicaset escalados com base nas linhas do DataFrame.
+        Generates a list of scaled replicasets based on the rows of the DataFrame.
         """
         scaled_deployments = []
 
