@@ -56,16 +56,25 @@ class Tracer:
         value from all timestamps in that DataFrame. It then filters the timestamps to retain only those
         that match a predefined list of fixed intervals (0 to 14400, with a step of 300 by default).
         """
-        timestamps = list(range(0, 14400 + 300, 300))
+        all_timestamps = dfs_list[0]['timestamp'].unique()
+        all_timestamps.sort()
+        min_timestamp = all_timestamps[0]
+        max_timestamp = all_timestamps[-1]
+        self.step = all_timestamps[1] - all_timestamps[0] if len(all_timestamps) > 1 else 0
 
-        # Normalizar os timestamps de cada DataFrame
+        # Get normalized informations from all metrics
+        min_timestamp_normalized = min_timestamp - min_timestamp
+        max_timestamp_normalized = max_timestamp - min_timestamp
+        timestamps = list(range(min_timestamp_normalized, max_timestamp_normalized + 1, self.step))
+
+        # Normalize the timestamps of each DataFrame
         normalized_dfs = []
         for df in dfs_list:
             if "timestamp" in df.columns:
                 min_timestamp = df["timestamp"].min()
                 df = df.copy()
                 df["timestamp"] = df["timestamp"] - min_timestamp
-                # Filtrar para manter apenas os timestamps que estão na lista fixa
+                # Filter to keep only the timestamps that are in the fixed list
                 df = df[df["timestamp"].isin(timestamps)]
             normalized_dfs.append(df)
         return normalized_dfs
@@ -108,7 +117,7 @@ class Tracer:
         if "pod" not in self.karpenter_pods_state.columns:
             self.karpenter_pods_state["pod"] = self.karpenter_pods_state["name.1"]
 
-        # Selecionando apenas as colunas finais desejadas
+        # Selecting only the desired final columns
         self.karpenter_pods_state = self.karpenter_pods_state[['timestamp', 'instance_type', 'node', 'pod', 'nodepool', 'phase']]
 
         self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]
@@ -136,7 +145,7 @@ class Tracer:
         8. Filters out rows where either `cpu` or `memory` is missing (marked as 'NA').
         9. Logs the total number of unique pods remaining after filtering.
         """
-        # Merge direto usando 'timestamp' e 'pod' como chaves
+        # Direct merge using 'timestamp' and 'pod' as keys
         df_merged = pd.merge(
             self.kube_pod_container_resource_requests,
             self.karpenter_pods_state,
@@ -153,29 +162,29 @@ class Tracer:
         df_merged["instance_type"] = df_merged["instance_type"].fillna("unallocated")
         df_merged["phase"] = df_merged["phase"].fillna("Pending")
 
-        # Preenchendo o dataframe com a ocorrencia mais próxima desse pod onde houver valores NA
+        # Filling the dataframe with the closest occurrence of this pod where there are NA values
         df_merged = df_merged.ffill().bfill()
 
-        # Remover linhas duplicadas, mantendo apenas as únicas
+        # Remove duplicate rows, keeping only unique ones
         df_merged = df_merged.drop_duplicates()
 
-        # Soma todas as ocorrencias de cpu e memoria para cada timestamp de um pod
+        # Sum all occurrences of CPU and memory for each timestamp of a pod
         df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node', 'resource']).agg({
             'value': 'sum'
         }).reset_index()
 
-        # Usar pivot para transformar 'resource' em colunas separadas para 'cpu' e 'memory'
+        # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory'
         df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node'],
                             columns='resource',
                             values='value').reset_index()
 
-        # Preenchendo valores ausentes com 'NA' para CPU e memória
+        # Fill missing values with 'NA' for CPU and memory
         df_pivoted['cpu'] = df_pivoted['cpu'].fillna('NA')
         df_pivoted['memory'] = df_pivoted['memory'].fillna('NA')
 
         self.df_final = df_pivoted[~((df_pivoted['cpu'] == 'NA') | (df_pivoted['memory'] == 'NA'))]
 
-        # Contagem total de pods criados e removidos (únicos)
+        # Total count of unique pods created and removed
         total_pods = self.df_final['pod'].nunique()
         self.log(f"[INFO] Number of pods after remove NAs and pods that finish on first timestamp: {total_pods}")
 
@@ -262,7 +271,7 @@ class Tracer:
 
         df_adjusted = df_adjusted.rename(columns={'pods_count': 'pods', 'cpu_count': 'cpu', 'memory_count': 'memory'})
 
-        # Essa etapa é para adicionar a ação relacionada ao replicaset
+        # This step is to add the action related to the replicaset
         df_adjusted['action'] = 'scale'
 
         first_occurrences = df_adjusted.groupby(['replicaset','nodepool','namespace']).head(1).index
@@ -374,9 +383,6 @@ class Tracer:
 
     def get_initial_input_step(self):
         """
-        Calculates the initial step size between unique, sorted timestamps in the dataframe.
+        Returns the initial step size between unique, sorted timestamps in the dataframe.
         """
-        timestamps = self.df_final['timestamp'].unique()
-        timestamps.sort()
-        step = timestamps[1] - timestamps[0] if len(timestamps) > 1 else 0
-        return step
+        return self.step

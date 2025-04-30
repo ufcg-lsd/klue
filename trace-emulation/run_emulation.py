@@ -29,7 +29,7 @@ def main():
     nodepool_path = sys.argv[2]
 
     # Executa o comando kubectl apply
-    subprocess.run(["kubectl", "apply", "-f", nodepool_path], check=True)
+    subprocess.run(["kubectl", "apply", "-f", nodepool_path])
 
     tracer = Tracer(
         os.path.join(trace_path, "kube_pod_container_resource_requests.csv"),
