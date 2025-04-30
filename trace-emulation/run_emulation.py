@@ -32,10 +32,10 @@ def main():
     subprocess.run(["kubectl", "apply", "-f", nodepool_path], check=True)
 
     tracer = Tracer(
-        os.path.join(trace_path, "cenario4/kube_pod_container_resource_requests.csv"),
-        os.path.join(trace_path, "cenario4/karpenter_pods_state.csv"),
-        os.path.join(trace_path, "cenario4/kube_pod_owner.csv"),
-        os.path.join(trace_path, "cenario4/kube_replicaset_owner.csv")
+        os.path.join(trace_path, "kube_pod_container_resource_requests.csv"),
+        os.path.join(trace_path, "karpenter_pods_state.csv"),
+        os.path.join(trace_path, "kube_pod_owner.csv"),
+        os.path.join(trace_path, "kube_replicaset_owner.csv")
     )
 
     # Executa o tracer.py
