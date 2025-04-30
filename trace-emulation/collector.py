@@ -1,27 +1,58 @@
+"""
+Collector class is responsible for collecting metrics from a Prometheus server over a specified duration.
+It reads metric names from a file, queries Prometheus for the metrics, and writes the results to CSV files.
+The CSV files are then compressed into a zip archive for easier handling.
+"""
+
 import csv
-import requests
 import time
 import json
 import os
-from datetime import datetime, timedelta
 import zipfile
 import glob
+from datetime import datetime, timedelta
+import requests
 
 class Collector:
+    """
+    This class collect and process metrics from a Prometheus server.
+
+    Attributes:
+        prometheus_host (str): The base URL of the Prometheus server.
+        step (int): The step interval (in seconds) for querying metrics.
+        metrics_file (str): The file containing the list of metrics to collect.
+    """
     def __init__(self, step, metrics_file='metrics.txt', prometheus_host="http://localhost:30222"):
+        """
+        Initializes the collector with the specified step interval, metrics file, 
+        and Prometheus host URL.
+        """
         self.prometheus_host = prometheus_host
         self.step = int(step)
         self.metrics_file = metrics_file
 
     def log(self, message):
+        """
+        Logs a message with a "[COLLECTOR]" prefix.
+        """
         print(f"[COLLECTOR] {message}")
 
     def read_metrics(self):
+        """
+        Reads metrics from a specified file and returns them as a list of strings.
+
+        The method opens the file specified by `self.metrics_file` in read mode,
+        reads each line, strips any leading or trailing whitespace, and stores
+        the cleaned lines in a list.
+        """
         with open(self.metrics_file, 'r') as f:
             metrics = [line.strip() for line in f]
         return metrics
 
     def request_metrics(self, metric):
+        """
+        Fetches metrics from a Prometheus server within a specified time range.
+        """
         end_time = int(time.time())  # Current time as end
         start_time = end_time - int(self.duration.total_seconds())  # Start time based on duration
 
@@ -51,6 +82,14 @@ class Collector:
             return None
 
     def write_csv(self, output_dir):
+        """
+        Writes metrics data to CSV files in the specified output directory.
+
+        This method iterates over a list of metrics, retrieves their data using
+        the `request_metrics` method, and writes the results to individual CSV
+        files. Each file is named after the metric's name and contains rows of
+        timestamped values along with their associated labels.
+        """
         self.log(f"[INFO] Writing CSV files to {output_dir}")
         for metric in self.metrics:
             response = self.request_metrics(metric)
@@ -70,7 +109,7 @@ class Collector:
 
             metric_name = results[0]["metric"].get("__name__", "")
 
-            with open(f"{output_dir}/{metric_name}.csv", "w") as f:
+            with open(f"{output_dir}/{metric_name}.csv", "w", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 labelnames = list(results[0]["metric"].keys())
 
@@ -87,6 +126,18 @@ class Collector:
                         writer.writerow(row)
 
     def collect(self, duration):
+        """
+        Collects metrics for a specified duration, writes them to CSV files, 
+        and compresses the files into a ZIP archive.
+
+        Steps:
+            1. Logs the start of the metric collection process.
+            2. Reads the metrics and stores them.
+            3. Creates a timestamped output directory for the CSV files.
+            4. Writes the collected metrics to CSV files in the output directory.
+            5. Compresses the CSV files into a ZIP archive.
+            6. Logs the completion of the zipping process.
+        """
         self.log(f"[INFO] Collecting metrics of this emulation for {duration} seconds.")
         self.duration = timedelta(seconds=int(duration))
         self.metrics = self.read_metrics()

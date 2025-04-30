@@ -1,3 +1,9 @@
+"""
+This class is responsible for running a trace emulation process. It applies a Kubernetes 
+node pool configuration, initializes a tracer to process trace data, and runs a broker 
+to handle the emulation steps. The script interacts with Kubernetes and processes trace 
+files to simulate cluster behavior.
+"""
 import sys
 import os
 import subprocess
@@ -5,6 +11,16 @@ from tracer import Tracer
 from broker import Broker
 
 def main():
+    """
+    Main function to execute the trace emulation process.
+
+    This function performs the following steps:
+    1. Validates the command-line arguments to ensure the required paths are provided.
+    2. Applies the Kubernetes node pool configuration using `kubectl apply`.
+    3. Initializes and runs the `Tracer` to process trace files.
+    4. Retrieves the initial input step from the tracer.
+    5. Initializes and runs the `Broker` to handle the emulation process.
+    """
     if len(sys.argv) < 3:
         print(f"Uso: {sys.argv[0]} <trace_path> <nodepool_path>")
         sys.exit(1)
