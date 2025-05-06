@@ -3,3 +3,4 @@ kube_replicaset_owner
 karpenter_nodes_allocatable
 karpenter_pods_state
 kube_deployment_spec_replicas
+kube_pod_container_resource_requests
