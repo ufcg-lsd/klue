@@ -107,12 +107,11 @@ rm /tmp/*.csv
 ```bash
 kubectl delete deployments -A --all
 ```
----
-## 👥 Developed by VTEX Lab Members
-- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)
-- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)
-- **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)
+## 👥 Team
+- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
+- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
+- **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)  
 
-## 👨‍🏫 Supervised by
-- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**
-- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**
+## 👨‍🏫 Supervised by  
+- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
+- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
