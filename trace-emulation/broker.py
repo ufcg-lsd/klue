@@ -175,12 +175,12 @@ class Broker:
         elif kind == "nodeclaim":
             try:
                 obj["metadata"].pop("resourceVersion", None)
-                self.k8s_api.patch_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", name, obj)
+                self.k8s_api.patch_infrastructure_object(obj, "karpenter.sh", "v1", "nodeclaims", name)
                 self.log(f"[INFO] Nodeclaim {name} updated")
             except client.exceptions.ApiException as e:
                 if e.status == 404:
                     obj["metadata"].pop("resourceVersion", None)
-                    self.k8s_api.create_cluster_custom_object("karpenter.sh", "v1", "nodeclaims", obj)
+                    self.k8s_api.create_infrastructure_object(obj, "karpenter.sh", "v1", "nodeclaims")
                     self.log(f"[INFO] Nodeclaim {name} created")
 
     def count_nodeclaims_per_nodepool(self):

@@ -17,8 +17,14 @@ class K8SAPI:
         self.v1 = client.CoreV1Api()
         self.apps_v1 = client.AppsV1Api()
         self.custom_api = client.CustomObjectsApi()
+    
+    def log(self, message):
+        print(f"[K8SAPI] {message}")
 
     # Nodes
+    def create_node(self, body, **kwargs):
+        return self.v1.create_node(body=body, **kwargs)
+
     def list_node(self, **kwargs):
         return self.v1.list_node(**kwargs)
     
@@ -74,3 +80,41 @@ class K8SAPI:
 
     def patch_cluster_custom_object(self, group, version, plural, name, body, **kwargs):
         return self.custom_api.patch_cluster_custom_object(group=group, version=version, plural=plural, name=name, body=body, **kwargs)
+
+    # Infrastructure creation and deletion
+    def create_infrastructure_object(self, body, group=None, version=None, plural=None, **kwargs):
+        kind = body.get("kind", "")
+
+        if kind == "Node":
+            return self.create_node(body=body, **kwargs)
+
+        if not all([group, version, plural]):
+            self.log("[ERROR] For CRDs, the parameters group, version, and plural are mandatory.")
+            raise ValueError()
+
+        return self.create_cluster_custom_object(
+            group=group,
+            version=version,
+            plural=plural,
+            body=body,
+            **kwargs
+        )
+
+    def patch_infrastructure_object(self, body, group=None, version=None, plural=None, name=None, **kwargs):
+        kind = body.get("kind", "")
+
+        if kind == "Node":
+            return self.patch_node(body=body, **kwargs)
+
+        if not all([group, version, plural]):
+            self.log("[ERROR] For CRDs, the parameters group, version, and plural are mandatory.")
+            raise ValueError()
+
+        return self.patch_cluster_custom_object(
+            group=group,
+            version=version,
+            plural=plural,
+            name=name,
+            body=body,
+            **kwargs
+        )

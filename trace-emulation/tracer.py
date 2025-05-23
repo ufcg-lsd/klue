@@ -383,6 +383,9 @@ class Tracer:
 
     def get_initial_input_step(self):
         """
-        Returns the initial step size between unique, sorted timestamps in the dataframe.
+        Calculates the initial step size between unique, sorted timestamps in the dataframe.
         """
-        return self.step
+        timestamps = self.df_final['timestamp'].unique()
+        timestamps.sort()
+        step = timestamps[1] - timestamps[0] if len(timestamps) > 1 else 0
+        return step

@@ -11,7 +11,7 @@ DESIRED_PENDING_PODS=$((INITIAL_PENDING_PODS - NUM_PODS_TO_SCHEDULE))
 cd ./custom-k8s-scheduler
 
 while [ ! -f "$PODS_AND_NODES_MAP" ]; do
-    echo "Aguardando o arquivo $PODS_AND_NODES_MAP ser criado..."
+    echo "[SCHEDULER] [INFO] Waiting $PODS_AND_NODES_MAP file be created..."
     sleep 2
 done
 
