@@ -20,6 +20,8 @@ kubectl wait \
 	--namespace=monitoring
 kubectl apply -f kube-prometheus/manifests/
 
+docker login
+
 if [ "$KARPENTER" = "karpenter-on" ]; then
 	cd karpenter-code
 

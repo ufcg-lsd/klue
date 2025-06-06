@@ -12,8 +12,9 @@ To create your emulated cluster, you first need **access to AWS** and must insta
 2. **KUBECTL** – Install via this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
 3. **AWS CLI** – Install using [this guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 4. **HELM** – Kubernetes package manager, install via [this guide](https://helm.sh/docs/intro/install/)
-5. **AWS SSO Configuration** – Follow [this tutorial](https://pushkar-sre.medium.com/how-to-set-up-aws-cli-with-aws-single-sign-on-sso-acf4dd88e056) to configure your default profile
-6. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
+5. **DOCKER** – Install Docker by following [this guide](https://docs.docker.com/engine/install/ubuntu/)
+6. **AWS SSO Configuration** – Follow [this tutorial](https://pushkar-sre.medium.com/how-to-set-up-aws-cli-with-aws-single-sign-on-sso-acf4dd88e056) to configure your default profile
+7. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
 
 ---
 

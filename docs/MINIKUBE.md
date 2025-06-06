@@ -11,7 +11,8 @@ To create your emulated cluster, you first need **access to AWS** and must insta
 1. **MINIKUBE** – Follow this [installation guide](https://minikube.sigs.k8s.io/docs/start/)
 2. **KUBECTL** – Install via this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
 3. **HELM** – Kubernetes package manager, install via [this guide](https://helm.sh/docs/intro/install/)
-4. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
+4. **DOCKER** – Install Docker by following [this guide](https://docs.docker.com/engine/install/ubuntu/)
+5. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
 
 ---
 
