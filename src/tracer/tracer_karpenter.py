@@ -7,7 +7,7 @@ import json
 import pandas as pd
 from util.k8s_object_generator import K8SObjectGenerator
 
-class Tracer:
+class TracerKarpenter:
     """
     The Tracer class is responsible for processing Kubernetes pod and node data to generate
     a trace of resource allocation and usage over time. It integrates data from multiple
@@ -21,7 +21,7 @@ class Tracer:
         kube_replicaset_owner_path (str): Path to the CSV file containing replicaset owner information.
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, karpenter_pods_state_path, kube_pod_owner_path, kube_replicaset_owner_path):
+    def __init__(self, kube_pod_container_resource_requests_path, karpenter_pods_state_path, kube_pod_owner_path, kube_replicaset_owner_path, instance_types_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
@@ -29,6 +29,7 @@ class Tracer:
         self.karpenter_pods_state_path = karpenter_pods_state_path
         self.kube_pod_owner_path = kube_pod_owner_path
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
+        self.instance_types_path = instance_types_path
         self.k8s_objects_generator = K8SObjectGenerator()
 
     def log(self, message):
@@ -225,7 +226,7 @@ class Tracer:
         that are not considered for further processing.
         """
         self.log("[INFO] Removing not considered resources and namespaces.")
-        self.df_final = self.df_final[~self.df_final['namespace'].isin(['kube-system'])]
+        self.df_final = self.df_final[~self.df_final['namespace'].isin(['kube-system', 'monitoring'])]
 
         self.df_final = self.df_final[~self.df_final['owner_kind'].isin(['DaemonSet', 'Job'])]
 
@@ -286,14 +287,14 @@ class Tracer:
 
         self.df_final.to_csv('/tmp/final_trace.csv', index=False)
 
-    def generate_trace_objects(self):
+    def generate_workload_objects(self):
         """
         Generates trace objects based on the data in `self.df_final`.
         Returns:
             tuple: A tuple containing:
                 - setup (dict): A dictionary with initial setup information, including:
-                    - 'nodeclaims' (list): An empty list reserved for node claims.
-                    - 'deployments' (list): A list of deployment objects generated for the first timestamp.
+                    - 'infrastructure' (list): An empty list reserved for node claims.
+                    - 'workload' (list): A list of deployment objects generated for the first timestamp.
                 - json_output (list): A list of dictionaries, each representing a trace entry for a 
                   specific timestamp. Each dictionary contains:
                     - "timestamp" (int): The timestamp of the event.
@@ -301,26 +302,25 @@ class Tracer:
                     - "deleted_objects" (list): A list of objects deleted at this timestamp.
                     - "scaled_replicasets" (list): A list of scaled replica sets at this timestamp.
         """
-        setup = {'nodeclaims': [], 'deployments': []}
-        json_output = []
+        workload_objects = {'setup': {}, 'emulation': []}
 
         first_timestamp = self.df_final['timestamp'].min()
 
         for timestamp, group in self.df_final.groupby('timestamp'):
             if timestamp == first_timestamp:
-                setup['deployments'], _, _ = self.k8s_objects_generator.generate_deployments(group)
+                workload_objects['setup'], _, _ = self.k8s_objects_generator.generate_deployments(group)
             else:
                 applied_objects, deleted_objects, scaled_replicasets = self.k8s_objects_generator.generate_deployments(group)
-                json_output.append({
+                workload_objects['emulation'].append({
                     "timestamp": int(timestamp),
                     "applied_objects": applied_objects,
                     "deleted_objects": deleted_objects,
                     "scaled_replicasets": scaled_replicasets
                 })
 
-        return setup, json_output
+        return workload_objects
 
-    def generate_nodeclaims(self):
+    def generate_infrastructure_objects(self):
         """
         Generates a list of node claims based on unique node and instance type combinations.
 
@@ -328,39 +328,39 @@ class Tracer:
         node pools, and instance types. It then generates node claims for each unique combination
         using the Kubernetes objects generator.
         """
-        nodeclaims = []
+        infrastructure_objects = {'setup': [], 'emulation': []}
 
         df_unique = self.df_pods_allocation.drop_duplicates(subset=['node', 'instance_type']).reset_index(drop=True)
         df_unique.to_csv("/tmp/nodeclaims.csv", index=False)
 
         df_grouped = df_unique.groupby(['node', 'nodepool', 'instance_type'])
 
-        with open("data/instance_types.json", encoding="utf-8") as f:
+        with open(self.instance_types_path, encoding="utf-8") as f:
             instance_data = json.load(f)
 
         for (_, nodepool_name, instance_type), _ in df_grouped:
             nodeclaim = self.k8s_objects_generator.generate_nodeclaim(instance_type, instance_data, nodepool_name)
             if nodeclaim:
-                nodeclaims.append(nodeclaim)
+                infrastructure_objects['setup'].append(nodeclaim)
 
-        return nodeclaims
+        return infrastructure_objects
 
     def process_and_save_output_objects(self):
         """
         Processes and saves the output objects generated by the trace emulation.
         """
         self.log("[INFO] Processing and saving output objects.")
-        setup, json_output = self.generate_trace_objects()
-        setup['nodeclaims'] = self.generate_nodeclaims()
+        workload_objects = self.generate_workload_objects()
+        infrastructure_objects = self.generate_infrastructure_objects()
 
-        final_json_output = {
-            "setup": setup,
-            "trace": json_output
-        }
+        workload_objects_json = json.dumps(workload_objects, indent=4)
+        infrastructure_objects_json = json.dumps(infrastructure_objects, indent=4)
 
-        json_result = json.dumps(final_json_output, indent=4)
-        with open('/tmp/output_objects.json', 'w', encoding="utf-8") as f:
-            f.write(json_result)
+        with open('/tmp/workload_description.json', 'w', encoding="utf-8") as f:
+            f.write(workload_objects_json)
+
+        with open('/tmp/infrastructure_description.json', 'w', encoding="utf-8") as f:
+            f.write(infrastructure_objects_json)
 
     def run(self):
         """
@@ -380,12 +380,3 @@ class Tracer:
         self.process_and_save_pods_allocation()
         self.process_and_save_final_trace()
         self.process_and_save_output_objects()
-
-    def get_initial_input_step(self):
-        """
-        Calculates the initial step size between unique, sorted timestamps in the dataframe.
-        """
-        timestamps = self.df_final['timestamp'].unique()
-        timestamps.sort()
-        step = timestamps[1] - timestamps[0] if len(timestamps) > 1 else 0
-        return step

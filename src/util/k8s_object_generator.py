@@ -9,22 +9,38 @@ from util.k8s_objects.nodeclaim_generator import NodeClaimGenerator
 from util.k8s_objects.deployments_generator import DeploymentsGenerator
 from util.k8s_objects.jobs_generator import JobsGenerator
 from util.k8s_objects.statefulsets_generator import StatefulSetsGenerator
+from util.k8s_objects.node_generator import NodeGenerator
 
 class K8SObjectGenerator:
     
-    def __init__(self):
+    def __init__(self, karpenter=True):
         self.nodeclaim_generator = NodeClaimGenerator()
-        self.deployments_generator = DeploymentsGenerator()
+        self.node_generator = NodeGenerator()
+        self.deployments_generator = DeploymentsGenerator(karpenter=karpenter)
         self.statefulsets_generator = StatefulSetsGenerator()
         self.jobs_generator = JobsGenerator()
+    
+    def log(self, message):
+        """
+        Logs a message with a "[K8S OBJECT GENERATOR]" prefix.
+        """
+        print(f"[K8S OBJECT GENERATOR] {message}")
         
     def generate_nodeclaim(self, instance_name, instance_data, nodepool_name):
         nodeclaim = self.nodeclaim_generator.generate_nodeclaim(instance_name, instance_data, nodepool_name)
 
         if nodeclaim == None:
-            print(f"Instância '{instance_name}' não encontrada.")
+            self.log(f"Instância '{instance_name}' não encontrada.")
         
         return nodeclaim
+
+    def generate_node(self, instance_type, instance_data, instance_name=None):
+        node = self.node_generator.generate_node(instance_type, instance_data, instance_name)
+
+        if node == None:
+            self.log(f"Instância '{instance_type}' não encontrada.")
+        
+        return node
     
     def generate_deployments(self, group: pd.DataFrame):
         applied_deployments = self.deployments_generator.generate_applied_deployments(group)

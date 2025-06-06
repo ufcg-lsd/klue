@@ -2,3 +2,6 @@ pyyaml>=5.4
 pandas>=1.3.0
 kubernetes>=21.0.0
 requests>=2.25.1
+
+
+How can i descript how to generate a file in this scrucute in a README

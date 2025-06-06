@@ -45218,5 +45218,1145 @@
             "memory": "256Gi",
             "pods": "512"
         }
+    },
+    {
+        "name": "t4g.2xlarge",
+        "offerings": [
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "8",
+            "ephemeral-storage": "100Gi",
+            "memory": "32Gi",
+            "pods": "128"
+        }
+    },
+    {
+        "name": "t4g.2xlarge",
+        "offerings": [
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.234359738368,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "8",
+            "ephemeral-storage": "100Gi",
+            "memory": "32Gi",
+            "pods": "128"
+        }
+    },
+    {
+        "name": "t4g.large",
+        "offerings": [
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "50Gi",
+            "memory": "8Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.large",
+        "offerings": [
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.058589934592,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "50Gi",
+            "memory": "8Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.xlarge",
+        "offerings": [
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "4",
+            "ephemeral-storage": "100Gi",
+            "memory": "16Gi",
+            "pods": "64"
+        }
+    },
+    {
+        "name": "t4g.xlarge",
+        "offerings": [
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.117179869184,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "4",
+            "ephemeral-storage": "100Gi",
+            "memory": "16Gi",
+            "pods": "64"
+        }
+    },
+    {
+        "name": "t4g.micro",
+        "offerings": [
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "20Gi",
+            "memory": "1Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.micro",
+        "offerings": [
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.051073741824000006,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "20Gi",
+            "memory": "1Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.small",
+        "offerings": [
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "30Gi",
+            "memory": "2Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.small",
+        "offerings": [
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.052147483648,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "30Gi",
+            "memory": "2Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.medium",
+        "offerings": [
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "amd64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "40Gi",
+            "memory": "4Gi",
+            "pods": "32"
+        }
+    },
+    {
+        "name": "t4g.medium",
+        "offerings": [
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-a"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-b"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-c"
+                        ]
+                    }
+                ]
+            },
+            {
+                "Price": 0.054294967296,
+                "Available": true,
+                "Requirements": [
+                    {
+                        "key": "karpenter.sh/capacity-type",
+                        "operator": "In",
+                        "values": [
+                            "on-demand"
+                        ]
+                    },
+                    {
+                        "key": "topology.kubernetes.io/zone",
+                        "operator": "In",
+                        "values": [
+                            "test-zone-d"
+                        ]
+                    }
+                ]
+            }
+        ],
+        "architecture": "arm64",
+        "operatingSystems": [
+            "linux"
+        ],
+        "resources": {
+            "cpu": "2",
+            "ephemeral-storage": "40Gi",
+            "memory": "4Gi",
+            "pods": "32"
+        }
     }
 ]

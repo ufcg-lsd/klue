@@ -96,6 +96,7 @@ spec:
             - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
             - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
             - --bind-address=127.0.0.1
+            - --secure-port=10261
             - --kubeconfig=/etc/kubernetes/scheduler.conf
             - --config=/etc/kubernetes/my-scheduler/my-scheduler-config.yaml
           resources:
@@ -106,7 +107,7 @@ spec:
             httpGet:
               host: 127.0.0.1
               path: /healthz
-              port: 10259
+              port: 10261
               scheme: HTTPS
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -116,7 +117,7 @@ spec:
             httpGet:
               host: 127.0.0.1
               path: /healthz
-              port: 10259
+              port: 10261
               scheme: HTTPS
             initialDelaySeconds: 10
             periodSeconds: 10

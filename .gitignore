@@ -8,10 +8,10 @@ analysis
 
 vtex-collector
 
-trace-emulation/data/*.csv
+data/*.csv
 
-trace-emulation/custom-k8s-scheduler/custom-scheduler
+src/custom-k8s-scheduler/custom-scheduler
 
-trace-emulation/output*
+src/output*
 
 venv/

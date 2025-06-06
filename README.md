@@ -5,60 +5,25 @@ KLUE is a **emulation tool** that allows developers to **test and validate cloud
 ---
 
 ## 🛠 Installation Guide
-Before testing your solutions and configurations, follow these steps to properly set up your environment.
+Execute our emulation tool is a very simple process, but it requires a configured cluster (or the informations to create it automatically). Before start, consideer read [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#minikube) if want to use a minikube cluster or [this one](https://github.com/ufcg-lsd/klue/tree/main/docs/#eks) if you want to use an EKS cluster.
 
-### 📌 Install Dependencies
-To create your emulated cluster, you first need **access to AWS** and must install the required dependencies:
+### 📌 Install Dependencies and Submodules
+With the cluster ready (or your environment to create one), you need to install the required dependencies and submodules:
 
-1. **EKSCTL** – Follow this [installation guide](https://eksctl.io/installation/)
-2. **KUBECTL** – Install via this [tutorial](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
-3. **AWS CLI** – Install using [this guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-4. **HELM** – Kubernetes package manager, install via [this guide](https://helm.sh/docs/intro/install/)
-5. **AWS SSO Configuration** – Follow [this tutorial](https://pushkar-sre.medium.com/how-to-set-up-aws-cli-with-aws-single-sign-on-sso-acf4dd88e056) to configure your default profile
-6. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt
-
----
-
-### 📌 Environment Variables
-
-| **Variable**              | **Description** |
-|---------------------------|---------------|
-| `CLUSTER_NAME`           | Name of your cluster |
-| `EKS_VERSION`            | EKS version to install |
-| `CLUSTER_CREATION_ARN`   | ARN with permissions to create the cluster |
-| `INSTANCE_ROLE_ARN`      | ARN with permissions to launch and manage instances |
-| `INSTANCE_PROFILE_ARN`   | Profile ARN with instance management permissions |
-| `SERVICE_ROLE_ARN`       | Service ARN with instance management permissions |
-| `REGION`                 | AWS Region |
-| `ENVIRONMENT`            | Environment tag for ASG |
-| `PRODUCT`               | Product tag |
-| `APPLICATION_NAME`       | Required tag to create the ASG |
-| `AWS_PROFILE`           | AWS SSO profile name |
-| `CLUSTER_CONFIG_FILE`    | Path of the cluster configuration file |
-| `NODEGROUP_CONFIG_FILE`  | Path of the nodegroup configuration file |
-| `NODECLASS_CONFIG_FILE`  | Path of the nodeclass configuration file |
-| `NODEPOOL_CONFIG_FILE`   | Path of the nodepool configuration file |
-| `CALICO_CONFIG_FILE`     | Path of the Calico configuration file |
-| `CLUSTER_CNI`           | Set to `AmazonVPC` (VPC CNI) or `Calico` (Calico CNI) |
-| `QUEUE_NAME`            | Name of the queue (if not using an existing one) |
-| `KARPENTER_VERSION`     | Karpenter Version |
-| `KARPENTER_NAMESPACE`   | Namespace to install Karpenter |
-| `CALICO_NAMESPACE`      | Namespace to install Calico |
-
-Once you have these dependencies installed, copy the `env.example` file to your `.env` using:
+1. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt. If necessary, you can create a venv.
 ```bash
-cp .env.example .env
+python3 -m pip install -r requirements.txt
 ```
 
-After this, init the submodule repositories `prometheus` and `karpenter-code` using
+2. **Git Submodules** – After this, init the submodule repositories `prometheus` and `karpenter-code` using
 ```bash
 git submodule update --init --recursive
 ```
 ---
-## 🚀 Executing the Emulation Tool
+## 📂 About the Emulation Input
+Follow [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#INPUT) to learn how to prepare the input for KLUE. The input can be a trace collected from a real cluster or a trace you generate yourself, as long as it follows the format defined in our tool's documentation.
 
-### 📂 Ensure Your Entry Files Are in the `data` Directory
-Please visit the `README.md` in `trace-emulator/data` to understand how your files should be structured.
+## 🚀 Executing the Emulation Tool
 
 ### 🔑 Grant Execution Permission
 Before running an emulation, grant execution permission to the **execute_emulation.sh** file by running:
@@ -66,23 +31,79 @@ Before running an emulation, grant execution permission to the **execute_emulati
 ```bash
 chmod +x execute-emulation.sh
 ```
-### ▶️ Running the Execution Manager
-There are multiple ways to run our emulation tool. One method is by using an **existing cluster** with at least **one node**:
+### ▶️ Running the KLUE
 
-```bash
-./execute_emulation.sh --sim --use-cluster <cluster-context> --trace-path <trace-path>
-```
-You can also create a **new cluster** with **one node**. To do that, you must have the roles set in your .env file:
+Our emulation tool supports **15 different execution modes** by combining the available flags. Below are the main ways to run the tool, with examples for each scenario. You can combine the flags as needed to fit your use case.
 
+Like you saw before, is possible to run our emulation tool in two different ways: using an existing cluster or creating a new one. The two readme files provided in [🛠 Installation Guide](#-installation-guide) describes more about the possibilities.
+
+#### 0. **Before Start**
+Now that you have decided the kind of cluster you want to use, you can create a new EKS cluster by using the flag **--new-cluster**:
 ```bash
-./execute_emulation.sh --sim --new-cluster --trace-path <trace-path>
+./execute_emulation.sh --new-cluster <other arguments>
 ```
-If you are unsure about the flags, please use the following command:
+Or use an existing cluster independing of the kind (EKS, minikube or another) by running:
+```bash
+./execute_emulation.sh --use-cluster <cluster-context> <other arguments>
+```
+
+**OBS:** you can get the cluster context by running `kubectl config current-context`.
+
+#### 1. **Basic Emulation with Existing Cluster**
+Use an existing cluster and provide a trace file, it will start an emulation without Karpenter, dynamic infrastructure and workload, and consideer that you don't have and input in the KLUE format:
+```bash
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path>
+```
+
+#### 2. **Enable Karpenter (Dynamic Node Management)**
+If you want to use Karpenter for dynamic node management, you need to provide the path to the nodepool file:
+```bash
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --use-karpenter --nodepool-path <nodepool-path>
+```
+
+#### 3. **Skip Tracer Step**
+Like we said before in [📂 About the Emulation Input](#-about-the-emulation-input), you can execute our emulation tool in a lot of scenarious. One of them, is the one which you have one input in the format of our tool. 
+Add `--skip-tracer` to any command to skip the trace generation step:
+```bash
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --skip-tracer
+```
+
+#### 5. **Static Infrastructure or Workload**
+Use static infrastructure and/or workload:
+```bash
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-infra
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-workload
+./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-infra --static-workload
+```
+
+#### 6. **Development Mode**
+Set up a development environment (no emulation):
+```bash
+./execute_emulation.sh --dev --use-cluster <cluster-context>
+./execute_emulation.sh --dev --new-cluster
+```
+You can also combine with `--use-karpenter` if needed (it will install the karpenter in your cluster).
+
+---
+
+#### ℹ️ **Combining Flags**
+You can combine the flags above to create up to 15 different execution modes, for example:
+- Emulation with new cluster, Karpenter, static infra, and skip tracer:
+  ```bash
+  ./execute_emulation.sh --sim --new-cluster --data-path <trace-path> --use-karpenter --nodepool-path <nodepool-path> --static-infra --skip-tracer
+  ```
+- Emulation with existing cluster, dynamic infra, and workload:
+  ```bash
+  ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path>
+  ```
+
+#### 7. **Help**
+To see all available options and combinations, run:
 ```bash
 ./execute_emulation.sh --help
 ```
 
-> **Note:** If you want to use our solution to generate the input files for the infrastructure and workload manager, please read the [README here](https://github.com/ufcg-lsd/klue/tree/main/trace-emulation/data#readme).
+> **Note:** Some flags require others (e.g., `--use-karpenter` requires `--nodepool-path`). If you provide invalid or missing combinations, the script will show an error message.
 
 ---
 ## 🧪 Example of Tool Execution
@@ -101,12 +122,16 @@ kubectl delete nodepools --all
 - **Cleaning the /tmp:**
 ```bash
 rm /tmp/*.csv
+rm /tmp/*.json
 ```
 
-- **Deleting all deployments:**
+- **Deleting all deployments (depending of your input):**
 ```bash
 kubectl delete deployments -A --all
+kubectl delete no --all
 ```
+
+---
 ## 👥 Team
 - **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
 - **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  

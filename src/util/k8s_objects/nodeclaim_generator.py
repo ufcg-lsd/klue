@@ -23,6 +23,12 @@ class NodeClaimGenerator:
         names and UUIDs.
         """
         self.reference_generator = UniqueReferenceGenerator()
+    
+    def log(self, message):
+        """
+        Logs a message with a "[NODECLAIM GENERATOR]" prefix.
+        """
+        print(f"[NODECLAIM GENERATOR] {message}")
 
     def get_nodepool_info(self, nodepool_name, instance_name):
         """
@@ -71,7 +77,7 @@ class NodeClaimGenerator:
                 
             return nodepool_info
         except subprocess.CalledProcessError as e:
-            print(f"Erro ao executar kubectl: {e.stderr}")
+            self.log(f"Error executing kubectl: {e.stderr}")
             return None
 
     def generate_nodeclaim(self, instance_name, instance_data, nodepool_name):

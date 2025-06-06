@@ -2,6 +2,13 @@ go install github.com/google/ko@latest
 export PATH=$PATH:~/go/bin
 source ~/.bashrc
 
+if [ $# -lt 1 ]; then
+	echo "Uso: $0 <karpenter-on/karpenter-off>"
+	exit 1
+fi
+
+KARPENTER="$1"
+
 # Setup Prometheus and Grafana
 
 kubectl create namespace monitoring
@@ -13,28 +20,22 @@ kubectl wait \
 	--namespace=monitoring
 kubectl apply -f kube-prometheus/manifests/
 
-cd karpenter-code
+if [ "$KARPENTER" = "karpenter-on" ]; then
+	cd karpenter-code
 
-make toolchain
-make build
-make install-kwok
-make apply
-make gen_instance_types
+	make toolchain
+	make build
+	make install-kwok
+	make apply
+	make gen_instance_types
 
-kubectl get po -A
+	cd ..
 
-cd ..
+	kubectl apply -f configuration-files/karpenter-servicemonitor.yml
+fi
 
-kubectl apply -f configuration-files/karpenter-servicemonitor.yml
 ./install-kwok.sh
 
 while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
   sleep 5
 done
-
-# Access Prometheus
-# kubectl port-forward --address 0.0.0.0 pod/prometheus-k8s-0  30222:9090 -n monitoring &
-
-# Access Grafana
-# kubectl port-forward --address 0.0.0.0 pod/my-prometheus-grafana-{hash}  3000:3000 -n monitoring &
-# kubectl get secret my-prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode; echo

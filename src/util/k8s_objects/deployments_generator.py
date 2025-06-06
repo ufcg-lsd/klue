@@ -7,8 +7,8 @@ Converts the CPU value to millicores (m) and returns it as a string.
 import pandas as pd
 
 class DeploymentsGenerator:
-    def __init__(self):
-        pass
+    def __init__(self, karpenter=True):
+        self.karpenter = karpenter
 
     def put_cpu_unity(self, value):
         """
@@ -31,31 +31,34 @@ class DeploymentsGenerator:
 
         for _, row in group[group['action'] == 'create'].iterrows():
             if row["owner_kind"].lower() == 'deployment' or row["owner_kind"].lower() == 'statefulset':
+                default_toleration_key = "kwok.x-k8s.io/node" if not self.karpenter else row['nodepool']
                 tolerations = [
                     {
-                        "key": f"{row['nodepool']}",
+                        "key": default_toleration_key,
                         "operator": "Exists",
                         "effect": "NoSchedule"
                     }
                 ]
 
-                affinity = {
-                    "nodeAffinity": {
-                        "requiredDuringSchedulingIgnoredDuringExecution": {
-                            "nodeSelectorTerms": [
-                                {
-                                    "matchExpressions": [
-                                        {
-                                            "key": "karpenter.sh/nodepool",
-                                            "operator": "In",
-                                            "values": [row["nodepool"]],
-                                        }
-                                    ]
-                                }
-                            ]
+                affinity = {}
+                if self.karpenter:
+                    affinity = {
+                        "nodeAffinity": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                                "nodeSelectorTerms": [
+                                    {
+                                        "matchExpressions": [
+                                            {
+                                                "key": "karpenter.sh/nodepool",
+                                                "operator": "In",
+                                                "values": [row["nodepool"]],
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
                         }
                     }
-                }
 
                 labels = {
                     "app": "fake-pod",

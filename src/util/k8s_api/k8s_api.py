@@ -63,6 +63,9 @@ class K8SAPI:
 
     def delete_namespaced_deployment(self, name, namespace, **kwargs):
         return self.apps_v1.delete_namespaced_deployment(name=name, namespace=namespace, **kwargs)
+    
+    def delete_namespaced_stateful_set(self, name, namespace, **kwargs):
+        return self.apps_v1.delete_namespaced_stateful_set(name=name, namespace=namespace, **kwargs)
 
     # StatefulSets
     def patch_namespaced_stateful_set_scale(self, name, namespace, body, **kwargs):
@@ -102,9 +105,10 @@ class K8SAPI:
 
     def patch_infrastructure_object(self, body, group=None, version=None, plural=None, name=None, **kwargs):
         kind = body.get("kind", "")
+        name = body.get("metadata", {}).get("name", name)
 
         if kind == "Node":
-            return self.patch_node(body=body, **kwargs)
+            return self.patch_node(name=name, body=body, **kwargs)
 
         if not all([group, version, plural]):
             self.log("[ERROR] For CRDs, the parameters group, version, and plural are mandatory.")
@@ -118,3 +122,6 @@ class K8SAPI:
             body=body,
             **kwargs
         )
+
+    def delete_infrastructure_object(self, name):
+        return self.v1.delete_node(name=name)

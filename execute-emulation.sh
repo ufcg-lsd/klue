@@ -2,15 +2,19 @@
 
 # Função para exibir a ajuda
 usage() {
-    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--trace-path PATH] [--nodepool-path PATH]"
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
     echo "  --sim                 Criar ambiente de emulação"
     echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
     echo "  --new-cluster         Criar um novo cluster"
-    echo "  --trace-path PATH     Especificar o caminho do trace a ser usado na emulação"
+    echo "  --data-path PATH      Especificar o caminho do trace a ser usado na emulação"
     echo "  --nodepool-path PATH  Especificar o caminho do nodepool a ser usado na emulação"
+    echo "  --use-karpenter       Ativar o Karpenter para gerenciamento de nós"
+    echo "  --skip-tracer         Pular a execução do tracer"
+    echo "  --static-infra        Usar infraestrutura estática na emulação"
+    echo "  --static-workload     Usar workload estático na emulação"
     echo "  -h, --help            Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -36,6 +40,10 @@ CLUSTER_ACTION=""
 CLUSTER_CONTEXT=""
 TRACE_PATH=""
 NODEPOOL_PATH=""
+TRACER="no-skip"
+KARPENTER="karpenter-off"
+INFRASTRUCTURE="dynamic"
+WORKLOAD="dynamic"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -56,13 +64,29 @@ while [[ $# -gt 0 ]]; do
             CLUSTER_ACTION="new"
             shift
             ;;
-        --trace-path)
+        --data-path)
             TRACE_PATH="$2"
             shift 2
             ;;
         --nodepool-path)
             NODEPOOL_PATH="$2"
             shift 2
+            ;;
+        --use-karpenter)
+            KARPENTER="karpenter-on"
+            shift
+            ;;
+        --skip-tracer)
+            TRACER="skip-tracer"
+            shift
+            ;;
+        --static-infra)
+            INFRASTRUCTURE="static"
+            shift
+            ;;
+        --static-workload)
+            WORKLOAD="static"
+            shift
             ;;
         -h|--help)
             usage
@@ -85,8 +109,13 @@ if [[ $CLUSTER_ACTION == "use" && -z $CLUSTER_CONTEXT ]]; then
     usage
 fi
 
-if [[ $ENVIRONMENT == "emulation" && (-z $TRACE_PATH || -z $NODEPOOL_PATH) ]]; then
-    echo "Erro: São necessários especificar --trace-path e --nodepool-path ao usar --sim."
+if [[ $ENVIRONMENT == "emulation" && -z $TRACE_PATH ]]; then
+    echo "Erro: É necessário especificar --data-path ao usar --sim."
+    usage
+fi
+
+if [[ $ENVIRONMENT == "emulation" && $KARPENTER == "karpenter-on" && -z $NODEPOOL_PATH ]]; then
+    echo "Erro: É necessário especificar --nodepool-path ao usar --sim com --use-karpenter."
     usage
 fi
 
@@ -104,11 +133,11 @@ fi
 if [[ $ENVIRONMENT == "development" ]]; then
     echo "Configurando ambiente de desenvolvimento..."
     cd kwok-karpenter-install
-    ./setup.sh
+    ./setup.sh "$KARPENTER"
 elif [[ $ENVIRONMENT == "emulation" ]]; then
     echo "Configurando ambiente de emulação..."
     cd kwok-karpenter-install
-    ./setup.sh
-    cd ../trace-emulation
-    python3 run_emulation.py "$TRACE_PATH" "$NODEPOOL_PATH"
+    ./setup.sh "$KARPENTER"
+    cd ../src
+    python3 main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
 fi
