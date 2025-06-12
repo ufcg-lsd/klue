@@ -2,9 +2,9 @@
 
 <img align="right" width="130px" src="assets/logo.png"/>
 
-KLUE is a **emulation tool** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses.
+KLUE is a **emulation tool** that allows developers to **test cloud solutions** without incurring unnecessary expenses.
 
-It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs.
+It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs of many ways.
 
 ## 🧩 The KLUE Architecture
 ![The Code Structure](assets/Diagrama.png)
