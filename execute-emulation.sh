@@ -2,13 +2,12 @@
 
 # Função para exibir a ajuda
 usage() {
-    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT | --new-cluster] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
     echo "  --sim                 Criar ambiente de emulação"
     echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
-    echo "  --new-cluster         Criar um novo cluster"
     echo "  --data-path PATH      Especificar o caminho do trace a ser usado na emulação"
     echo "  --nodepool-path PATH  Especificar o caminho do nodepool a ser usado na emulação"
     echo "  --use-karpenter       Ativar o Karpenter para gerenciamento de nós"
@@ -17,14 +16,6 @@ usage() {
     echo "  --static-workload     Usar workload estático na emulação"
     echo "  -h, --help            Exibir esta mensagem de ajuda"
     exit 1
-}
-
-# Função para criar um cluster novo
-create_new_cluster() {
-    echo "Criando cluster novo..."
-    cd kwok-karpenter-install
-    ./create-cluster.sh
-    cd ..
 }
 
 # Função para configurar um cluster existente
@@ -59,10 +50,6 @@ while [[ $# -gt 0 ]]; do
             CLUSTER_ACTION="use"
             CLUSTER_CONTEXT="$2"
             shift 2
-            ;;
-        --new-cluster)
-            CLUSTER_ACTION="new"
-            shift
             ;;
         --data-path)
             TRACE_PATH="$2"
@@ -119,16 +106,6 @@ if [[ $ENVIRONMENT == "emulation" && $KARPENTER == "karpenter-on" && -z $NODEPOO
     usage
 fi
 
-# Execução das ações
-if [[ $CLUSTER_ACTION == "new" ]]; then
-    create_new_cluster
-elif [[ $CLUSTER_ACTION == "use" ]]; then
-    use_existing_cluster "$CLUSTER_CONTEXT"
-else
-    echo "Nenhuma ação de cluster especificada. Criando um novo cluster por padrão."
-    create_new_cluster
-fi
-
 # Configuração do ambiente
 if [[ $ENVIRONMENT == "development" ]]; then
     echo "Configurando ambiente de desenvolvimento..."
@@ -138,6 +115,6 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     echo "Configurando ambiente de emulação..."
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER"
-    cd ../src
-    python3 main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
+    cd ..
+    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
 fi

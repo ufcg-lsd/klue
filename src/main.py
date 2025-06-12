@@ -11,7 +11,60 @@ from tracer.tracer_karpenter import TracerKarpenter
 from tracer.tracer_kwok import TracerKWOKOnly
 from manager import Manager
 
-def main():
+class Main:
+    def __init__(self, trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload):
+        self.trace_path = trace_path
+        self.nodepool_path = nodepool_path
+        self.karpenter = karpenter
+        self.tracer_skip = tracer_skip
+        self.infrastructure = infrastructure
+        self.workload = workload
+    
+    def apply_nodepool(self):
+        """
+        Applies the Kubernetes node pool configuration using kubectl apply.
+        
+        This method runs the command `kubectl apply -f <nodepool_path>` to apply the 
+        specified node pool configuration to the Kubernetes cluster.
+        """
+        
+        subprocess.run(["kubectl", "apply", "-f", self.nodepool_path])
+
+    def run_tracer(self):
+        tracer = None
+        if self.karpenter:
+            tracer = TracerKarpenter(
+                os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
+                os.path.join(self.trace_path, "karpenter_pods_state.csv"),
+                os.path.join(self.trace_path, "kube_pod_owner.csv"),
+                os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
+                os.path.join(self.trace_path, "instance_types.json")
+            )
+        else:
+            tracer = TracerKWOKOnly(
+                os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
+                os.path.join(self.trace_path, "container_cpu_usage_seconds_total.csv"),
+                os.path.join(self.trace_path, "kube_pod_owner.csv"),
+                os.path.join(self.trace_path, "kube_pod_status_phase.csv"),
+                os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
+                os.path.join(self.trace_path, "instance_types.json")
+            )
+
+        # Executa o tracer.py
+        if not self.tracer_skip:
+            tracer.run()
+
+    def run_manager(self):
+        """
+        Initializes and runs the Manager to handle the emulation process.
+        This method creates an instance of the Manager class with the provided
+        parameters and calls its run method to start the emulation.
+        """
+        # Executa o broker.py
+        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload)
+        manager.run()
+
+if __name__ == "__main__":
     """
     Main function to execute the trace emulation process.
 
@@ -23,7 +76,7 @@ def main():
     5. Initializes and runs the Manager to handle the emulation process.
     """
     if len(sys.argv) < 3:
-        print(f"Uso: {sys.argv[0]} <trace_path> <nodepool_path> <karpenter-on/off> <skip-tracer/no-skip>")
+        print(f"Uso: {sys.argv[0]} <data_path> <nodepool_path> <karpenter-on/off> <skip-tracer/no-skip> <infrastructure> <workload>")
         sys.exit(1)
 
     trace_path = sys.argv[1]
@@ -33,35 +86,10 @@ def main():
     infrastructure = sys.argv[5]
     workload = sys.argv[6]
 
-    # Executa o comando kubectl apply
-    subprocess.run(["kubectl", "apply", "-f", nodepool_path])
+    main_instance = Main(trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload)
 
-    tracer = None
-    if karpenter:
-        tracer = TracerKarpenter(
-            os.path.join(trace_path, "kube_pod_container_resource_requests.csv"),
-            os.path.join(trace_path, "karpenter_pods_state.csv"),
-            os.path.join(trace_path, "kube_pod_owner.csv"),
-            os.path.join(trace_path, "kube_replicaset_owner.csv"),
-            os.path.join(trace_path, "instance_types.json")
-        )
-    else:
-        tracer = TracerKWOKOnly(
-            os.path.join(trace_path, "kube_pod_container_resource_requests.csv"),
-            os.path.join(trace_path, "container_cpu_usage_seconds_total.csv"),
-            os.path.join(trace_path, "kube_pod_owner.csv"),
-            os.path.join(trace_path, "kube_pod_status_phase.csv"),
-            os.path.join(trace_path, "kube_replicaset_owner.csv"),
-            os.path.join(trace_path, "instance_types.json")
-        )
+    main_instance.apply_nodepool()
 
-    # Executa o tracer.py
-    if not tracer_skip:
-        tracer.run()
+    main_instance.run_tracer()
 
-    # Executa o broker.py
-    manager = Manager(karpenter=karpenter, infrastructure=infrastructure, workload=workload)
-    manager.run()
-
-if __name__ == "__main__":
-    main()
+    main_instance.run_manager()

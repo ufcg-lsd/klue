@@ -131,7 +131,7 @@ class InfrastructureManager:
 
         # The last timestamp in the trace does not matter (it represents the tear down phase),
         # so we can just sleep for the input step duration.
-        time.sleep(50)
+        time.sleep(15)
 
     def tear_down(self):
         pass

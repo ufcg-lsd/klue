@@ -127,8 +127,8 @@ class WorkloadManager:
                         self.log(f"[ERROR] Failed to delete {kind} {name} in namespace {namespace}: {e}")
 
         # The last timestamp in the trace does not matter (it represents the tear down phase),
-        # so we can just sleep for 5 minutes.
-        time.sleep(50)
+        # so we can just sleep for 15 seconds.
+        time.sleep(15)
 
     def tear_down(self):
         pass

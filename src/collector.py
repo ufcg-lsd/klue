@@ -22,7 +22,7 @@ class Collector:
         step (int): The step interval (in seconds) for querying metrics.
         metrics_file (str): The file containing the list of metrics to collect.
     """
-    def __init__(self, step, metrics_file='metrics.txt', prometheus_host="http://localhost:30222"):
+    def __init__(self, step, metrics_file='src/metrics.txt', prometheus_host="http://localhost:30222"):
         """
         Initializes the collector with the specified step interval, metrics file, 
         and Prometheus host URL.

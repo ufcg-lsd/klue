@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      annotations:
+        compatibility.karpenter.sh/v1beta1-kubelet-conversion: '{"clusterDNS":["10.43.0.10"]}'
+        compatibility.karpenter.sh/v1beta1-nodeclass-reference: '{"name":"default"}'
+        karpenter.sh/nodepool-hash: "3786101946780137123"
+        karpenter.sh/nodepool-hash-version: v3
+      labels:
+        node-group: default
+        karpenter.sh/nodepool: default
+      name: default
+    spec:
+      disruption:
+        budgets:
+        - nodes: 10%
+        consolidateAfter: 5m
+        consolidationPolicy: WhenEmptyOrUnderutilized
+      template:
+        metadata: {}
+        spec:
+          expireAfter: Never
+          nodeClassRef:
+            name: default
+            kind: KWOKNodeClass
+            group: karpenter.kwok.sh
+          requirements:
+          - key: node.kubernetes.io/instance-type
+            operator: In
+            values:
+            - c6a.2xlarge
+          - key: karpenter.sh/capacity-type
+            operator: In
+            values:
+            - on-demand
+          - key: kubernetes.io/arch
+            operator: In
+            values:
+            - arm64
+          - key: node-group
+            operator: Exists
+---
+apiVersion: karpenter.kwok.sh/v1alpha1
+kind: KWOKNodeClass
+metadata:
+  name: default

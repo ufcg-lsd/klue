@@ -6,8 +6,6 @@ KLUE is a **emulation tool** that allows developers to **test and validate cloud
 
 It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs.
 
-
-
 ## 🧩 The KLUE Architecture
 ![The Code Structure](assets/Diagrama.png)
 
@@ -31,8 +29,7 @@ chmod +x create-cluster.sh
 ./create-cluster.sh
 ```
 
-### 📌 Installing dependencies and Creating a cluster manually
-Check [this file](https://github.com/ufcg-lsd/klue/tree/main/docs/#dependencies) if you want to install the dependencies manually. And consideer read the [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#minikube) if want to setup a minikube cluster manually or [this one](https://github.com/ufcg-lsd/klue/tree/main/docs/#eks) if you want to use an EKS cluster manually.
+**IMPORTANT!!!:** Read [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#eks) if you want to use an EKS cluster, you should setup some environment variables before running the script.
 
 ---
 ## 📂 About the Emulation Input

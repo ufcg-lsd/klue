@@ -50,7 +50,7 @@ class Manager:
         2. Runs the `build-scheduler.sh` script using a subprocess call to set up the scheduler.
         """
         self.pods_mapping.run()
-        subprocess.run(["bash", "build-scheduler.sh"], check=True)
+        subprocess.run(["bash", "src/build-scheduler.sh"], check=True)
 
     def run(self):
         """
@@ -96,7 +96,7 @@ class Manager:
         self.log("[INFO] WorkloadManager emulation thread completed.")
 
         duration = int((datetime.now() - start).total_seconds() + 15)
-        subprocess.run(["bash", "port-forward.sh"], check=True)
+        subprocess.run(["bash", "src/port-forward.sh"], check=True)
         self.collector.collect(duration=duration)
 
         self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")

@@ -1,0 +1,5 @@
+timestamp,replicaset,owner_kind,owner_name
+0,default,Deployment,default
+5,default,Deployment,default
+10,default,Deployment,default
+15,default,Deployment,default

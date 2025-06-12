@@ -1,5 +1,7 @@
 .env
 __pycache__/
+.pytest_cache/
+.vscode/
 
 # Playground is the place to devs that may not be uploaded
 playground/

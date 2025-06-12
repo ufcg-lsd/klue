@@ -8,7 +8,7 @@ INITIAL_PENDING_PODS=$(kubectl get pods --all-namespaces --field-selector=status
 
 DESIRED_PENDING_PODS=$((INITIAL_PENDING_PODS - NUM_PODS_TO_SCHEDULE))
 
-cd ./custom-k8s-scheduler
+cd ./src/custom-k8s-scheduler
 
 while [ ! -f "$PODS_AND_NODES_MAP" ]; do
     echo "[SCHEDULER] [INFO] Waiting $PODS_AND_NODES_MAP file be created..."
