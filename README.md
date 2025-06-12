@@ -149,4 +149,5 @@ kubectl delete no --all
 
 ## 👨‍🏫 Supervised by  
 - **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
-- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
+- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**
+- **Thiago Manel – PhD, Federal University of Campina Grande (UFCG)**
