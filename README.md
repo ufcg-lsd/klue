@@ -1,24 +1,37 @@
-# 🚀 KLUE – A VTEX Lab Tool for Emulating Infrastructure and Workload
+# 🚀 KLUE – `K`ubernetes `L`ite exec`U`tion `E`nvironment – A VTEX Lab Tool for Emulating Infrastructure and Workload
+
+<img align="right" width="180px" src="assets/logo.png"/>
 
 KLUE is a **emulation tool** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses. It enables seamless **Kubernetes** experimentation, helping teams optimize configurations, improve scalability, and reduce cloud costs.
 
 ---
 
+## 🧩 The KLUE Architecture
+![The Code Structure](assets/Diagrama.png)
+
+---
 ## 🛠 Installation Guide
-Execute our emulation tool is a very simple process, but it requires a configured cluster (or the informations to create it automatically). Before start, consideer read [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#minikube) if want to use a minikube cluster or [this one](https://github.com/ufcg-lsd/klue/tree/main/docs/#eks) if you want to use an EKS cluster.
+Execute our emulation tool is a very simple process, but it requires a configured cluster (or the informations to create it automatically). To help you with that, we created some scripts that will help you to install the dependencies and create a cluster, if you want to. If else, just install the dependencies and run the emulation tool passing the cluster context as an argument (you will see more about this on [▶️ Running the KLUE](#-running-the-klue)).
 
-### 📌 Install Dependencies and Submodules
-With the cluster ready (or your environment to create one), you need to install the required dependencies and submodules:
+**Note:** We strongly recommend using a Minikube or EKS cluster, but you can also use any other Kubernetes cluster, once you have installed the dependencies to run an emulation.
 
-1. **Python3 Libraries** – Install the necessary libraries as listed in the requirements.txt. If necessary, you can create a venv.
+### 📌 Installing Dependencies
+To install the required dependencies for an Minikube or EKS cluster (don't worry about how to create one of these kind of clusters for now), run the following command:
 ```bash
-python3 -m pip install -r requirements.txt
+chmod +x install-dependencies.sh
+./install-dependencies.sh
 ```
 
-2. **Git Submodules** – After this, init the submodule repositories `prometheus` and `karpenter-code` using
+### 📌 Creating an Cluster
+To create your cluster, and start your journey with our emulation tool, you just need to run:
 ```bash
-git submodule update --init --recursive
+chmod +x create-cluster.sh
+./create-cluster.sh
 ```
+
+### 📌 Installing dependencies and Creating a cluster manually
+Check [this file](https://github.com/ufcg-lsd/klue/tree/main/docs/#dependencies) if you want to install the dependencies manually. And consideer read the [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#minikube) if want to setup a minikube cluster manually or [this one](https://github.com/ufcg-lsd/klue/tree/main/docs/#eks) if you want to use an EKS cluster manually.
+
 ---
 ## 📂 About the Emulation Input
 Follow [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#INPUT) to learn how to prepare the input for KLUE. The input can be a trace collected from a real cluster or a trace you generate yourself, as long as it follows the format defined in our tool's documentation.
@@ -33,19 +46,10 @@ chmod +x execute-emulation.sh
 ```
 ### ▶️ Running the KLUE
 
-Our emulation tool supports **15 different execution modes** by combining the available flags. Below are the main ways to run the tool, with examples for each scenario. You can combine the flags as needed to fit your use case.
-
-Like you saw before, is possible to run our emulation tool in two different ways: using an existing cluster or creating a new one. The two readme files provided in [🛠 Installation Guide](#-installation-guide) describes more about the possibilities.
+Our emulation tool supports **8 different execution modes** by combining the available flags. Below are the main ways to run the tool, with examples for each scenario. You can combine the flags as needed to fit your use case.
 
 #### 0. **Before Start**
-Now that you have decided the kind of cluster you want to use, you can create a new EKS cluster by using the flag **--new-cluster**:
-```bash
-./execute_emulation.sh --new-cluster <other arguments>
-```
-Or use an existing cluster independing of the kind (EKS, minikube or another) by running:
-```bash
-./execute_emulation.sh --use-cluster <cluster-context> <other arguments>
-```
+Now that you have decided the kind of cluster you want to use and created it, you can use an existing cluster independing of the kind (EKS, minikube or another).
 
 **OBS:** you can get the cluster context by running `kubectl config current-context`.
 
@@ -62,7 +66,7 @@ If you want to use Karpenter for dynamic node management, you need to provide th
 ```
 
 #### 3. **Skip Tracer Step**
-Like we said before in [📂 About the Emulation Input](#-about-the-emulation-input), you can execute our emulation tool in a lot of scenarious. One of them, is the one which you have one input in the format of our tool. 
+Like we said before in [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#INPUT), you can execute our emulation tool in a lot of scenarious. One of them, is the one which you have one input in the format of our tool. 
 Add `--skip-tracer` to any command to skip the trace generation step:
 ```bash
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --skip-tracer
@@ -76,11 +80,10 @@ Use static infrastructure and/or workload:
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-infra --static-workload
 ```
 
-#### 6. **Development Mode**
-Set up a development environment (no emulation):
+#### 6. **Playground (Development) Mode**
+Set up a development environment (no emulation), it's just for test Karpenter actions manually:
 ```bash
 ./execute_emulation.sh --dev --use-cluster <cluster-context>
-./execute_emulation.sh --dev --new-cluster
 ```
 You can also combine with `--use-karpenter` if needed (it will install the karpenter in your cluster).
 
@@ -88,9 +91,9 @@ You can also combine with `--use-karpenter` if needed (it will install the karpe
 
 #### ℹ️ **Combining Flags**
 You can combine the flags above to create up to 15 different execution modes, for example:
-- Emulation with new cluster, Karpenter, static infra, and skip tracer:
+- Emulation with existing cluster, Karpenter, static infra, and skip tracer:
   ```bash
-  ./execute_emulation.sh --sim --new-cluster --data-path <trace-path> --use-karpenter --nodepool-path <nodepool-path> --static-infra --skip-tracer
+  ./execute_emulation.sh --sim --use-cluster --data-path <trace-path> --use-karpenter --nodepool-path <nodepool-path> --static-infra --skip-tracer
   ```
 - Emulation with existing cluster, dynamic infra, and workload:
   ```bash
@@ -106,8 +109,16 @@ To see all available options and combinations, run:
 > **Note:** Some flags require others (e.g., `--use-karpenter` requires `--nodepool-path`). If you provide invalid or missing combinations, the script will show an error message.
 
 ---
-## 🧪 Example of Tool Execution
-![Demo do KLUE](assets/emulation-running.gif)
+
+## 🧪 Testing
+If you want to contribue with our project, we have some simple tests which ensure the correct functioning of the KLUE flow. It will help you to see if have inserted some bug in the code or if you have broken something. To run the tests, just run:
+```bash
+PYTHONPATH=./src pytest tests/test_klue_workflow.py
+```
+
+We have 8 test cases, each one cover the different execution modes of the emulation tool.
+
+**OBS:** The tests may take a while to run, as they involve setting up a Kubernetes cluster and running the emulation tool multiple times. In average, it takes around 20 - 25 minutes to run all tests depending on your network connection.
 
 ---
 ## ⚠️ Important Precautions
