@@ -1,6 +1,6 @@
 # 🚀 KLUE – `K`ubernetes `L`ite exec`U`tion `E`nvironment
 
-<img align="right" width="100px" src="assets/logo.png"/>
+<img align="right" width="130px" src="assets/logo.png"/>
 
 KLUE is a **emulation tool** that allows developers to **test and validate cloud infrastructure changes** without incurring unnecessary expenses.
 
