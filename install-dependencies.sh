@@ -105,7 +105,20 @@ install_minikube() {
     echo "Minikube installed successfully."
 }
 
-# 7. Install Python libraries
+# 7. Install Kind
+install_kind() {
+    if command_exists kind; then
+        echo "Kind is already installed."
+        return
+    fi
+    echo "Installing Kind..."
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+    chmod +x ./kind
+    sudo mv ./kind /usr/local/bin/kind
+    echo "Kind installed successfully."
+}
+
+# 8. Install Python libraries
 install_python_deps() {
     # Check if a virtual environment is already activated
     if [ -n "$VIRTUAL_ENV" ]; then
@@ -140,7 +153,8 @@ echo "This script will install dependencies for the development environment."
 echo "Please choose the environment you want to set up:"
 echo "1) EKS Environment (includes eksctl, aws-cli)"
 echo "2) Minikube Environment (includes minikube)"
-read -p "Enter 1 or 2: " choice
+echo "3) Kind Environment (includes kind)"
+read -p "Enter 1 2, or 3: " choice
 
 case $choice in
     1)
@@ -169,6 +183,21 @@ case $choice in
         install_kubectl
         install_helm
         install_minikube
+        install_python_deps
+        echo ""
+        echo -e "${YELLOW}--- MANUAL ACTION REQUIRED ---${NC}"
+        echo "--------------------------------"
+        echo "To ACTIVATE the Python virtual environment, run:"
+        echo -e "${YELLOW}source venv/bin/activate${NC}"
+        echo "--------------------------------"
+        ;;
+    3)
+        echo "--- Setting up Kind Environment ---"
+        git submodule update --init --recursive
+        install_docker
+        install_kubectl
+        install_helm
+        install_kind
         install_python_deps
         echo ""
         echo -e "${YELLOW}--- MANUAL ACTION REQUIRED ---${NC}"

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kwok-provider-templates
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: autoscaler-kwok
+    meta.helm.sh/release-namespace: default
+data:
+  templates: |
+    apiVersion: v1
+    kind: Node
+    metadata:
+      name: kind-worker-template
+      labels:
+        type: kwok
+        kwok.x-k8s.io/node: fake
+        # Este label será usado pelo autoscaler para identificar o nodegroup
+        kwok-nodegroup: worker-group
+    spec:
+      taints:
+        - effect: NoSchedule
+          key: kwok-provider
+          value: true
+    status:
+      capacity:
+        cpu: "12"
+        memory: "8Gi"
+        pods: "110"
+      allocatable:
+        cpu: "12"
+        memory: "8Gi"
+        pods: "110"
+      conditions:
+        - type: Ready
+          status: "True"
+          reason: "KubeletReady"
+          message: "fake node ready"
+
+    config: |-
+      apiVersion: v1alpha1
+      readNodesFrom: configmap # Usando ConfigMap como origem de nós
+      nodegroups:
+        # Usando o label 'kwok-nodegroup' para identificar o nodegroup
+        fromNodeLabelKey: "kwok-nodegroup"
+        # Se preferir usar anotação, pode substituir acima e descomentar a linha abaixo
+        # fromNodeAnnotation: "example.com/nodegroup"
+        configmap:
+          name: kwok-provider-templates
