@@ -85,6 +85,7 @@ elif [ "$CLUSTER_CHOICE" == "3" ]; then
     sed -i "s|server: https://127.0.0.1:[0-9]*|server: https://$CONTROL_PLANE_IP:6443|g" kwok.kubeconfig
 
     kubectl create configmap kwok-kubeconfig --from-file=kwok.kubeconfig=kwok.kubeconfig -n default
+    rm kwok.kubeconfig
 else
     echo "Invalid option. Exiting."
     exit 1
