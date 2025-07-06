@@ -5,16 +5,18 @@ usage() {
     echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
     echo ""
     echo "Opções:"
-    echo "  --dev                 Criar ambiente de desenvolvimento"
-    echo "  --sim                 Criar ambiente de emulação"
-    echo "  --use-cluster CONTEXT Usar um cluster existente (passe o nome do contexto)"
-    echo "  --data-path PATH      Especificar o caminho do trace a ser usado na emulação"
-    echo "  --nodepool-path PATH  Especificar o caminho do nodepool a ser usado na emulação"
-    echo "  --use-karpenter       Ativar o Karpenter para gerenciamento de nós"
-    echo "  --skip-tracer         Pular a execução do tracer"
-    echo "  --static-infra        Usar infraestrutura estática na emulação"
-    echo "  --static-workload     Usar workload estático na emulação"
-    echo "  -h, --help            Exibir esta mensagem de ajuda"
+    echo "  --dev                                     Criar ambiente de desenvolvimento"
+    echo "  --sim                                     Criar ambiente de emulação"
+    echo "  --use-cluster CONTEXT                     Usar um cluster existente (passe o nome do contexto)"
+    echo "  --data-path PATH                          Especificar o caminho do trace a ser usado na emulação"
+    echo "  --nodepool-path PATH                      Especificar o caminho do nodepool a ser usado na emulação"
+    echo "  --use-karpenter                           Ativar o Karpenter para gerenciamento de nós"
+    echo "  --cluster-autoscaler-provider-template    Especificar o caminho do template do cluster autoscaler"
+    echo "  --use-kubernetes-cluster-autoscaler       Ativar o Kubernetes Autoscaler para gerenciamento de nós"
+    echo "  --skip-tracer                             Pular a execução do tracer"
+    echo "  --static-infra                            Usar infraestrutura estática na emulação"
+    echo "  --static-workload                         Usar workload estático na emulação"
+    echo "  -h, --help                                Exibir esta mensagem de ajuda"
     exit 1
 }
 
@@ -63,6 +65,14 @@ while [[ $# -gt 0 ]]; do
             KARPENTER="karpenter-on"
             shift
             ;;
+        --cluster-autoscaler-provider-template)
+            CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE="$2"
+            shift 2
+            ;;
+        --use-kubernetes-cluster-autoscaler)
+            KUBERNETES_AUTOSCALER="kubernetes-autoscaler-on"
+            shift
+            ;;
         --skip-tracer)
             TRACER="skip-tracer"
             shift
@@ -106,6 +116,16 @@ if [[ $ENVIRONMENT == "emulation" && $KARPENTER == "karpenter-on" && -z $NODEPOO
     usage
 fi
 
+if [[ $ENVIRONMENT == "emulation" && $KUBERNETES_AUTOSCALER == "kubernetes-autoscaler-on" && -z $CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE ]]; then
+    echo "Erro: É necessário especificar --cluster-autoscaler-provider-template ao usar --sim com --use-kubernetes-autoscaler."
+    usage
+fi
+
+if [[ $KUBERNETES_AUTOSCALER == "kubernetes-autoscaler-on" && $KARPENTER == "karpenter-on" ]]; then
+    echo "Erro: Não é possível usar Karpenter e Kubernetes Cluster Autoscaler ao mesmo tempo."
+    usage
+fi
+
 # Configuração do ambiente
 if [[ $ENVIRONMENT == "development" ]]; then
     echo "Configurando ambiente de desenvolvimento..."
@@ -114,7 +134,7 @@ if [[ $ENVIRONMENT == "development" ]]; then
 elif [[ $ENVIRONMENT == "emulation" ]]; then
     echo "Configurando ambiente de emulação..."
     cd kwok-karpenter-install
-    ./setup.sh "$KARPENTER"
+    ./setup.sh "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE"
     cd ..
     python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
 fi
