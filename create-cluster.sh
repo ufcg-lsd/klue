@@ -13,6 +13,7 @@ command_exists() {
 echo "Which type of cluster do you want to create?"
 echo "1) EKS Environment"
 echo "2) Minikube Environment"
+echo "3) Kind Environment"
 read CLUSTER_CHOICE
 
 if [ "$CLUSTER_CHOICE" == "1" ]; then
@@ -75,6 +76,15 @@ if [ "$CLUSTER_CHOICE" == "1" ]; then
 elif [ "$CLUSTER_CHOICE" == "2" ]; then
     echo "Minikube selected. (Add your code here to create the Minikube cluster)"
     minikube start --cpus='4' --memory='6g'
+elif [ "$CLUSTER_CHOICE" == "3" ]; then
+    echo "Kind selected."
+    kind create cluster --name klue-cluster
+    kind get kubeconfig --name klue-cluster > kwok.kubeconfig
+
+    CONTROL_PLANE_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' klue-cluster-control-plane)
+    sed -i "s|server: https://127.0.0.1:[0-9]*|server: https://$CONTROL_PLANE_IP:6443|g" kwok.kubeconfig
+
+    kubectl create configmap kwok-kubeconfig --from-file=kwok.kubeconfig=kwok.kubeconfig -n default
 else
     echo "Invalid option. Exiting."
     exit 1

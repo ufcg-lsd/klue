@@ -11,7 +11,8 @@ command_exists() {
 echo "Which type of cluster do you want to delete?"
 echo "1) EKS Environment"
 echo "2) Minikube Environment"
-read -p "Enter the number of your choice [1/2]: " CLUSTER_CHOICE
+echo "3) Kind Environment"
+read -p "Enter the number of your choice 1, 2 or 3: " CLUSTER_CHOICE
 
 if [ "$CLUSTER_CHOICE" == "1" ]; then
     # EKS (AWS) deletion
@@ -88,6 +89,9 @@ if [ "$CLUSTER_CHOICE" == "1" ]; then
 elif [ "$CLUSTER_CHOICE" == "2" ]; then
     echo "Minikube selected. Deleting Minikube cluster..."
     minikube delete -p minikube || echo "Failed to delete Minikube cluster. It may not exist or is already deleted."
+elif [ "$CLUSTER_CHOICE" == "3" ]; then
+    echo "Kind selected. Deleting Kind cluster..."
+    kind delete cluster --name klue-cluster || echo "Failed to delete Kind cluster."
 else
     echo "Invalid option. Exiting."
     exit 1
