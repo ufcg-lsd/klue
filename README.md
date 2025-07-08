@@ -124,7 +124,7 @@ We have 8 test cases, each one cover the different execution modes of the emulat
 
 When running the emulation multiple times on the same cluster, that are **three main steps** needed for guaranteeing that you will have a correct execution, these are:
 
-- **Removing all nodepools:**
+- **Removing all nodepools (only when using Karpenter):**
 ```bash
 kubectl delete nodepools --all
 ```
@@ -150,3 +150,4 @@ kubectl delete no --all
 ## 👨‍🏫 Supervised by  
 - **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
 - **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
+- **Thiago Emmanuel – PhD, Federal University of Campina Grande (UFCG)**  
