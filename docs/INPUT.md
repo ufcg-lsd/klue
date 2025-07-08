@@ -15,7 +15,7 @@ You must pass the **--data-path** argument to the script, which should point to 
 
 You must pass the **--nodepool-path** argument to the script, which should point to a directory containing the following CSV files:
 
-### For a emulation **With Minikube**
+### For a emulation **Without Karpenter**
 - 📊 `container_cpu_usage_seconds_total`
 - 🖥️ `kube_pod_container_resource_requests`
 - 🔗 `kube_pod_owner`
@@ -24,38 +24,96 @@ You must pass the **--nodepool-path** argument to the script, which should point
 - 📊 `instance_types.json` (our instance_types.json located in [/data](https://github.com/ufcg-lsd/klue/tree/main/data/instance_types.json) have all instance types, so you can just use it).
 
 ## 📂 Generate input yourself
-You must pass the **--data-path** argument to the script, which should point to a directory containing the following files:
+The input consists of two JSON files and one CSV that will be used to create the Kubernetes objects needed for the emulation. The first JSON is for the workload(Deployments), and the second one is for the infrastructure(Nodes). The CSV file contains the mapping of the Pods to the Nodes in the beggining of the emulation.
 
-### For a emulation **With Karpenter**
+You can see the example files [here](https://github.com/ufcg-lsd/klue/tree/main/docs/example/)
 
-Your just need to provide a JSON following the format below, which will be used to create the NodeClaim resources in Karpenter. The script will generate the necessary Kubernetes manifests based on this JSON.
-
+The JSON of infrastructure description is represented below:
 ```json
 {
-  "setup": [
-    {
-      "apiVersion": "karpenter.sh/v1",
-      "kind": "NodeClaim",
-      "metadata": {
-        "name": "node1",
-        ...
-      },
-      ...
-    },
-    {
-      "apiVersion": "karpenter.sh/v1",
-      "kind": "NodeClaim",
-      "metadata": {
-        "name": "node2",
-        ...
-      },
-      ...
-    }
-  ],
-  "emulation": []
+    "setup": [
+      {"Node/Nodeclaim 1 Yaml"},
+      {"Node/Nodeclaim 2 Yaml"}
+    ],
+    "emulation": [
+        {
+            "timestamp": 0,
+            "applied_objects": [
+                {"node yaml 1"},
+                {"node yaml 2"}
+            ],
+            "deleted_objects": [
+                "name1",
+                "name2"
+            ]
+        },
+        {
+            "timestamp": 300,
+            "applied_objects": [
+                {"node yaml 1"},
+                {"node yaml 2"}
+            ],
+            "deleted_objects": [
+                "node name 1",
+                "node name 2"
+            ]
+        },
+    ]
 }
 ```
 
-> **Note:** Karpenter is an autoscaling solution, so you don't need to modify the "emulation" section in the JSON. Just provide the "setup" part as shown above.
+The JSON of workload description is represented below:
+```json
+{
+    "setup": {
+        "namespace 1": [
+            {"deployment yaml 1"},
+            {"deployment yaml 2"}
+        ],
+    "emulation": [
+        {
+            "timestamp": 0,
+            "applied_objects": [
+                { 
+                    "namespace 1": [
+                        {"deployment yaml 1"},
+                        {"deployment yaml 2"}
+                    ]
+                }
+            ],
+            "scaled_objects": [
+                {
+                    "name": "deployment name 1",
+                    "namespace": "deployment namespace 1",
+                    "pods": 10,
+                    "kind": "deployment"
+                },
+                {
+                    "name": "deployment name 2",
+                    "namespace": "deployment namespace 2",
+                    "pods": 1,
+                    "kind": "deployment"
+                }
+            ],
+            "deleted_objects": [
+                {
+                    "name": "deployment name 1",
+                    "namespace": "deployment namespace 1"
+                },
+                {
+                    "name": "deployment name 2",
+                    "namespace": "deployment namespace 2"
+                }
+            ]
+        },
+        {
+            "timestamp": 300,
+            "applied_objects": [],
+            "scaled_objects": [],
+            "deleted_objects": []
+        },
+    ]
+}
+```
 
-### For a emulation **With Minikube**
+> **Note:** You still need to pass the **--data-path** argument to the script containing just que instance_types.json file, which is located in [/data](https://github.com/ufcg-lsd/klue/tree/main/data/instance_types.json).
