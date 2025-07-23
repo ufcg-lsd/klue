@@ -22,7 +22,7 @@ class Collector:
         step (int): The step interval (in seconds) for querying metrics.
         metrics_file (str): The file containing the list of metrics to collect.
     """
-    def __init__(self, step, metrics_file='src/metrics.txt', prometheus_host="http://localhost:30222"):
+    def __init__(self, step, metrics_file='src/metrics.txt', prometheus_host="http://localhost:30222", emulation_name=None):
         """
         Initializes the collector with the specified step interval, metrics file, 
         and Prometheus host URL.
@@ -30,6 +30,7 @@ class Collector:
         self.prometheus_host = prometheus_host
         self.step = int(step)
         self.metrics_file = metrics_file
+        self.emulation_name = emulation_name
 
     def log(self, message):
         """
@@ -143,7 +144,12 @@ class Collector:
         self.metrics = self.read_metrics()
         now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-        output_dir = f"output_csv_{now}"
+        if self.emulation_name:
+            output_dir = self.emulation_name
+        else:
+            output_dir = f"output_csv_{now}"
+        
+        
         os.makedirs(output_dir, exist_ok=True)
         self.write_csv(output_dir)
 
