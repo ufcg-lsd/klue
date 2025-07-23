@@ -9,18 +9,20 @@ import os
 import subprocess
 from tracer.tracer_karpenter import TracerKarpenter
 from tracer.tracer_kwok import TracerKWOKOnly
+from tracer.tracer_cluster_autoscaler import TracerClusterAutoscaler
 from manager import Manager
 
 class Main:
-    def __init__(self, trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload, emulation_name = None):
+    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None):
         self.trace_path = trace_path
         self.nodepool_path = nodepool_path
         self.karpenter = karpenter
+        self.cluster_autoscaler = cluster_autoscaler
         self.tracer_skip = tracer_skip
         self.infrastructure = infrastructure
         self.workload = workload
         self.emulation_name = emulation_name
-    
+
     def apply_nodepool(self):
         """
         Applies the Kubernetes node pool configuration using kubectl apply.
@@ -38,6 +40,15 @@ class Main:
                 os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
                 os.path.join(self.trace_path, "karpenter_pods_state.csv"),
                 os.path.join(self.trace_path, "kube_pod_owner.csv"),
+                os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
+                os.path.join(self.trace_path, "instance_types.json")
+            )
+        elif self.cluster_autoscaler:
+            tracer = TracerClusterAutoscaler(
+                os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
+                os.path.join(self.trace_path, "container_cpu_usage_seconds_total.csv"),
+                os.path.join(self.trace_path, "kube_pod_owner.csv"),
+                os.path.join(self.trace_path, "kube_pod_status_phase.csv"),
                 os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
                 os.path.join(self.trace_path, "instance_types.json")
             )
@@ -77,19 +88,19 @@ if __name__ == "__main__":
     5. Initializes and runs the Manager to handle the emulation process.
     """
     if len(sys.argv) < 3:
-        print(f"Uso: {sys.argv[0]} <data_path> <nodepool_path> <karpenter-on/off> <skip-tracer/no-skip> <infrastructure> <workload>")
+        print(f"Uso: {sys.argv[0]} <data_path> <nodepool_path> <karpenter-on/off> <cluster_autoscaler-on/off> <skip-tracer/no-skip> <infrastructure> <workload>")
         sys.exit(1)
 
     trace_path = sys.argv[1]
     nodepool_path = sys.argv[2]
     karpenter = True if (sys.argv[3] == "karpenter-on") else False
-    tracer_skip = True if (sys.argv[4] == "skip-tracer") else False
-    infrastructure = sys.argv[5]
-    workload = sys.argv[6]
-    emulation_name = sys.argv[7]
+    cluster_autoscaler = True if (sys.argv[4] == "kubernetes-autoscaler-on") else False
+    tracer_skip = True if (sys.argv[5] == "skip-tracer") else False
+    infrastructure = sys.argv[6]
+    workload = sys.argv[7]
+    emulation_name = sys.argv[8]
 
-
-    main_instance = Main(trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload, emulation_name)
+    main_instance = Main(trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name)
 
     main_instance.apply_nodepool()
 

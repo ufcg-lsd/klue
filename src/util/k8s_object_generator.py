@@ -13,10 +13,10 @@ from util.k8s_objects.node_generator import NodeGenerator
 
 class K8SObjectGenerator:
     
-    def __init__(self, karpenter=True):
+    def __init__(self, karpenter=True, cluster_autoscaler = False):
         self.nodeclaim_generator = NodeClaimGenerator()
         self.node_generator = NodeGenerator()
-        self.deployments_generator = DeploymentsGenerator(karpenter=karpenter)
+        self.deployments_generator = DeploymentsGenerator(karpenter=karpenter, cluster_autoscaler=cluster_autoscaler)
         self.statefulsets_generator = StatefulSetsGenerator()
         self.jobs_generator = JobsGenerator()
     

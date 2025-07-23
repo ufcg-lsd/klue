@@ -5,6 +5,7 @@ usage() {
     echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
     echo ""
     echo "Opções:"
+    echo "  --emulation-name NAME                     Nome da emulação"
     echo "  --dev                                     Criar ambiente de desenvolvimento"
     echo "  --sim                                     Criar ambiente de emulação"
     echo "  --use-cluster CONTEXT                     Usar um cluster existente (passe o nome do contexto)"
@@ -40,6 +41,10 @@ WORKLOAD="dynamic"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --emulation-name)
+            EMULATION_NAME="$2"
+            shift 2
+            ;;
         --dev)
             ENVIRONMENT="development"
             shift
@@ -136,5 +141,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE"
     cd ..
-    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
+    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD" "$EMULATION_NAME"
 fi

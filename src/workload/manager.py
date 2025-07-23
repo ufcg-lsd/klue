@@ -185,6 +185,6 @@ class WorkloadManager:
         and filters out pods that belong to the namespaces specified in the 
         `excluded_namespaces` list. It then returns the total count of the remaining pods.
         """
-        excluded_namespaces = ["kube-system", "monitoring"]
+        excluded_namespaces = ["kube-system", "monitoring", "local-path-storage"]
         pods = self.k8s_api.list_pod_for_all_namespaces()
         return sum(1 for pod in pods.items if pod.metadata.namespace not in excluded_namespaces)

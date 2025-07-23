@@ -7,8 +7,9 @@ Converts the CPU value to millicores (m) and returns it as a string.
 import pandas as pd
 
 class DeploymentsGenerator:
-    def __init__(self, karpenter=True):
+    def __init__(self, karpenter=True, cluster_autoscaler=False):
         self.karpenter = karpenter
+        self.cluster_autoscaler = cluster_autoscaler
 
     def put_cpu_unity(self, value):
         """
@@ -59,6 +60,23 @@ class DeploymentsGenerator:
                             }
                         }
                     }
+                elif self.cluster_autoscaler:
+                    affinity = {
+                        "nodeAffinity": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                                "nodeSelectorTerms": [
+                                    {
+                                        "matchExpressions": [
+                                            {
+                                                "key": "node-role.kubernetes.io/control-plane",
+                                                "operator": "DoesNotExist"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
 
                 labels = {
                     "app": "fake-pod",
@@ -68,7 +86,7 @@ class DeploymentsGenerator:
                 pod_template = {
                     "metadata": {"labels": labels},
                     "spec": {
-                        "schedulerName": "custom-scheduler",
+                        **({"schedulerName": "custom-scheduler"} if not self.cluster_autoscaler else {}),
                         "affinity": affinity,
                         "tolerations": tolerations,
                         "containers": [
