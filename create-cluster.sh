@@ -10,11 +10,15 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-echo "Which type of cluster do you want to create?"
-echo "1) EKS Environment"
-echo "2) Minikube Environment"
-echo "3) Kind Environment"
-read CLUSTER_CHOICE
+if [ -n "$1" ]; then
+    CLUSTER_CHOICE="$1"
+else
+    echo "Which type of cluster do you want to create?"
+    echo "1) EKS Environment"
+    echo "2) Minikube Environment"
+    echo "3) Kind Environment"
+    read CLUSTER_CHOICE
+fi
 
 if [ "$CLUSTER_CHOICE" == "1" ]; then
     # EKS (AWS)
