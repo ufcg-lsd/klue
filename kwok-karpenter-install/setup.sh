@@ -51,6 +51,27 @@ elif [ "$KUBERNETES_AUTOSCALER" = "kubernetes-autoscaler-on" ]; then
 
 	echo "Instalando o Kubernetes Cluster Autoscaler"
 
+	cd autoscaler
+	helm upgrade --install autoscaler-kwok charts/cluster-autoscaler \
+		--namespace default \
+		--set cloudProvider=kwok \
+		--set image.tag="v1" \
+		--set image.repository="caetanobca/cluster-autoscaler-kwok" \
+		--set extraArgs.v="4" \
+		--set extraArgs.logtostderr="true" \
+		--set extraArgs.stderrthreshold="info" \
+		--set extraArgs.kubeconfig="/etc/kubeconfig/kwok.kubeconfig" \
+		--set serviceMonitor.enabled=false \
+		--set autoscalingGroups[0].name=dummy \
+		--set autoscalingGroups[0].minSize=0 \
+		--set autoscalingGroups[0].maxSize=5 \
+		--set extraVolumeMounts[0].name=kwok-kubeconfig \
+		--set extraVolumeMounts[0].mountPath="/etc/kubeconfig" \
+		--set extraVolumeMounts[0].readOnly=true \
+		--set extraVolumes[0].name=kwok-kubeconfig \
+		--set extraVolumes[0].configMap.name=kwok-kubeconfig
+	cd ..
+
 	kubectl apply -f configuration-files/kwok-provider-config.yaml
 	
 	kubectl annotate configmap kwok-provider-config \
@@ -69,35 +90,16 @@ elif [ "$KUBERNETES_AUTOSCALER" = "kubernetes-autoscaler-on" ]; then
 	kubectl label configmap kwok-provider-templates \
 		app.kubernetes.io/managed-by=Helm --overwrite
 
-	cd autoscaler
-	#cd /home/ubuntu/ca/autoscaler
-	helm upgrade --install autoscaler-kwok charts/cluster-autoscaler \
-		--namespace default \
-		--set cloudProvider=kwok \
-		--set image.tag="v1.32.1" \
-		--set image.repository="registry.k8s.io/autoscaling/cluster-autoscaler" \
-		--set extraArgs.v="4" \
-		--set extraArgs.logtostderr="true" \
-		--set extraArgs.stderrthreshold="info" \
-		--set extraArgs.kubeconfig="/etc/kubeconfig/kwok.kubeconfig" \
-		--set serviceMonitor.enabled=false \
-		--set autoscalingGroups[0].name=dummy \
-		--set autoscalingGroups[0].minSize=0 \
-		--set autoscalingGroups[0].maxSize=5 \
-		--set extraVolumeMounts[0].name=kwok-kubeconfig \
-		--set extraVolumeMounts[0].mountPath="/etc/kubeconfig" \
-		--set extraVolumeMounts[0].readOnly=true \
-		--set extraVolumes[0].name=kwok-kubeconfig \
-		--set extraVolumes[0].configMap.name=kwok-kubeconfig
-
-	cd ..
-	#cd /home/ubuntu/klue/kwok-karpenter-install
 
 	while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
   		sleep 5
 	done
+	
+	while [[ $(kubectl get pods -l app.kubernetes.io/name=kwok-cluster-autoscaler -o jsonpath='{.items[0].status.phase}') != "Running" ]]; do
+    	sleep 5
+	done
 
-	kubectl taint nodes klue-cluster-control-plane node-role.kubernetes.io/control-plane=:NoSchedule
+	# kubectl taint nodes klue-cluster-control-plane node-role.kubernetes.io/control-plane=:NoSchedule
 else
 	echo "Karpenter e Kubernetes Cluster Autoscaler estão desativados."
 	echo "Instalando o KWOK"

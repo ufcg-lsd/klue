@@ -9,43 +9,37 @@ metadata:
     meta.helm.sh/release-name: autoscaler-kwok
     meta.helm.sh/release-namespace: default
 data:
-  templates: |
+  templates: |- 
     apiVersion: v1
-    kind: Node
+    kind: List
     metadata:
-      name: kind-worker-template
-      labels:
-        type: kwok
-        kwok.x-k8s.io/node: fake
-        # Este label será usado pelo autoscaler para identificar o nodegroup
-        kwok-nodegroup: worker-group
-    spec:
-      taints:
-        - effect: NoSchedule
-          key: kwok-provider
-          value: true
-    status:
-      capacity:
-        cpu: "12"
-        memory: "8Gi"
-        pods: "110"
-      allocatable:
-        cpu: "12"
-        memory: "8Gi"
-        pods: "110"
-      conditions:
-        - type: Ready
+      resourceVersion: ""
+    items:
+    - apiVersion: v1
+      kind: Node
+      metadata:
+        name: kind-worker-template
+        annotations: {}
+        labels:
+          type: kwok
+          kwok.x-k8s.io/node: fake
+          kwok-nodegroup: worker-group
+      spec:
+      status:
+        capacity:
+          cpu: "8"
+          ephemeral-storage: 1019013632Ki
+          memory: 16Gi
+          pods: "110"
+        allocatable:
+          cpu: "8"
+          ephemeral-storage: 1019013632Ki
+          memory: 16Gi
+          pods: "110"
+        conditions:
+        - lastHeartbeatTime: "2023-05-31T04:39:58Z"
+          lastTransitionTime: "2023-05-31T04:39:46Z"
+          type: Ready
           status: "True"
-          reason: "KubeletReady"
+          reason: KubeletReady
           message: "fake node ready"
-
-    config: |-
-      apiVersion: v1alpha1
-      readNodesFrom: configmap # Usando ConfigMap como origem de nós
-      nodegroups:
-        # Usando o label 'kwok-nodegroup' para identificar o nodegroup
-        fromNodeLabelKey: "kwok-nodegroup"
-        # Se preferir usar anotação, pode substituir acima e descomentar a linha abaixo
-        # fromNodeAnnotation: "example.com/nodegroup"
-        configmap:
-          name: kwok-provider-templates
