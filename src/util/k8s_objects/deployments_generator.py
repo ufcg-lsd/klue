@@ -33,6 +33,7 @@ class DeploymentsGenerator:
         for _, row in group[group['action'] == 'create'].iterrows():
             if row["owner_kind"].lower() == 'deployment' or row["owner_kind"].lower() == 'statefulset':
                 default_toleration_key = "kwok.x-k8s.io/node" if not self.karpenter else row['nodepool']
+
                 tolerations = [
                     {
                         "key": default_toleration_key,
@@ -40,6 +41,17 @@ class DeploymentsGenerator:
                         "effect": "NoSchedule"
                     }
                 ]
+
+                if self.cluster_autoscaler:
+                    default_toleration_key = "kwok-provider"
+                    tolerations = [
+                        {
+                            "key": default_toleration_key,
+                            "operator": "Equal",
+                            "value": "true",
+                            "effect": "NoSchedule"
+                        }
+                    ]
 
                 affinity = {}
                 if self.karpenter:

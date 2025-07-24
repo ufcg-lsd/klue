@@ -53,7 +53,7 @@ elif [ "$KUBERNETES_AUTOSCALER" = "kubernetes-autoscaler-on" ]; then
 
 	cd autoscaler
 	helm upgrade --install autoscaler-kwok charts/cluster-autoscaler \
-		--namespace default \
+		--namespace kube-system \
 		--set cloudProvider=kwok \
 		--set image.tag="v1" \
 		--set image.repository="caetanobca/cluster-autoscaler-kwok" \
@@ -72,22 +72,22 @@ elif [ "$KUBERNETES_AUTOSCALER" = "kubernetes-autoscaler-on" ]; then
 		--set extraVolumes[0].configMap.name=kwok-kubeconfig
 	cd ..
 
-	kubectl apply -f configuration-files/kwok-provider-config.yaml
+	kubectl apply -f configuration-files/kwok-provider-config.yaml -n kube-system
 	
-	kubectl annotate configmap kwok-provider-config \
+	kubectl annotate configmap kwok-provider-config -n kube-system \
 		meta.helm.sh/release-name=autoscaler-kwok \
 		meta.helm.sh/release-namespace=default --overwrite 
 	
-	kubectl label configmap kwok-provider-config \
+	kubectl label configmap kwok-provider-config -n kube-system \
 		app.kubernetes.io/managed-by=Helm --overwrite
 
-	kubectl apply -f ${CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE}
+	kubectl apply -f ${CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE} -n kube-system
 
-	kubectl annotate configmap kwok-provider-templates \
+	kubectl annotate configmap kwok-provider-templates -n kube-system \
 		meta.helm.sh/release-name=autoscaler-kwok \
 		meta.helm.sh/release-namespace=default --overwrite
 
-	kubectl label configmap kwok-provider-templates \
+	kubectl label configmap kwok-provider-templates -n kube-system \
 		app.kubernetes.io/managed-by=Helm --overwrite
 
 
@@ -95,7 +95,7 @@ elif [ "$KUBERNETES_AUTOSCALER" = "kubernetes-autoscaler-on" ]; then
   		sleep 5
 	done
 	
-	while [[ $(kubectl get pods -l app.kubernetes.io/name=kwok-cluster-autoscaler -o jsonpath='{.items[0].status.phase}') != "Running" ]]; do
+	while [[ $(kubectl get pods -n kube-system -l app.kubernetes.io/name=kwok-cluster-autoscaler -o jsonpath='{.items[0].status.phase}') != "Running" ]]; do
     	sleep 5
 	done
 

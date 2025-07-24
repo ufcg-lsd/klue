@@ -2,12 +2,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kwok-provider-templates
-  namespace: default
+  namespace: kube-system
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
     meta.helm.sh/release-name: autoscaler-kwok
-    meta.helm.sh/release-namespace: default
+    meta.helm.sh/release-namespace: kube-system
 data:
   templates: |- 
     apiVersion: v1
