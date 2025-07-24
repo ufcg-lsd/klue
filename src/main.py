@@ -22,6 +22,7 @@ class Main:
         self.infrastructure = infrastructure
         self.workload = workload
         self.emulation_name = emulation_name
+        self.allocation_rule_path = allocation_rule_path
 
     def apply_nodepool(self):
         """
@@ -50,7 +51,8 @@ class Main:
                 os.path.join(self.trace_path, "kube_pod_owner.csv"),
                 os.path.join(self.trace_path, "kube_pod_status_phase.csv"),
                 os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
-                os.path.join(self.trace_path, "instance_types.json")
+                os.path.join(self.trace_path, "instance_types.json"),
+                self.allocation_rule_path
             )
         else:
             tracer = TracerKWOKOnly(
@@ -99,8 +101,9 @@ if __name__ == "__main__":
     infrastructure = sys.argv[6]
     workload = sys.argv[7]
     emulation_name = sys.argv[8]
+    allocation_rule_path = sys.argv[9]
 
-    main_instance = Main(trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name)
+    main_instance = Main(trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name, allocation_rule_path)
 
     main_instance.apply_nodepool()
 

@@ -22,7 +22,7 @@ class TracerClusterAutoscaler:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path):
+    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, allocation_rule_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
@@ -33,6 +33,13 @@ class TracerClusterAutoscaler:
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
         self.instance_types_path = instance_types_path
         self.k8s_objects_generator = K8SObjectGenerator(karpenter=False, cluster_autoscaler=True)
+        
+        if allocation_rule_path:
+            with open(allocation_rule_path, 'r') as f:
+                self.allocation_rule = json.load(f)
+        else:
+            self.allocation_rule = None
+
 
     def log(self, message):
         """
@@ -384,9 +391,9 @@ class TracerClusterAutoscaler:
 
         for timestamp, group in self.df_final.groupby('timestamp'):
             if timestamp == first_timestamp:
-                workload_objects['setup'], _, _ = self.k8s_objects_generator.generate_deployments(group)
+                workload_objects['setup'], _, _ = self.k8s_objects_generator.generate_deployments(group, self.allocation_rule)
             else:
-                applied_objects, deleted_objects, scaled_replicasets = self.k8s_objects_generator.generate_deployments(group)
+                applied_objects, deleted_objects, scaled_replicasets = self.k8s_objects_generator.generate_deployments(group, self.allocation_rule)
                 workload_objects['emulation'].append({
                     "timestamp": int(timestamp),
                     "applied_objects": applied_objects,

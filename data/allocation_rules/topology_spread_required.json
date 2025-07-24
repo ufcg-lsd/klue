@@ -1,0 +1,5 @@
+{
+    "rule_type": "topology_spread",
+    "required": true,
+    "maxSkew": 1
+}

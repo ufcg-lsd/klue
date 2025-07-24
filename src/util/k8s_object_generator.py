@@ -42,8 +42,8 @@ class K8SObjectGenerator:
         
         return node
     
-    def generate_deployments(self, group: pd.DataFrame):
-        applied_deployments = self.deployments_generator.generate_applied_deployments(group)
+    def generate_deployments(self, group: pd.DataFrame, allocation_rule=None):
+        applied_deployments = self.deployments_generator.generate_applied_deployments(group, allocation_rule)
         deleted_deployments = self.deployments_generator.generate_deleted_deployments(group)
         scaled_deployments = self.deployments_generator.generate_scaled_deployments(group)
         

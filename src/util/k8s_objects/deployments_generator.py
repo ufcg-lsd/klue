@@ -23,11 +23,86 @@ class DeploymentsGenerator:
         """
         mebibytes = int(value) // (2 ** 20)
         return f"{mebibytes}Mi"
+    
+    def topology_spread_rule(self, spec, labels):
+        required = spec.get("required", True)
+        max_skew = spec.get("max_skew", 1)
 
-    def generate_applied_deployments(self, group: pd.DataFrame):
+        if required:
+            rule_type = "DoNotSchedule"
+        else:
+            rule_type = "ScheduleAnyway"
+
+        topology_spread = [
+                    {
+                        "maxSkew": max_skew,
+                        "whenUnsatisfiable": rule_type,
+                        "labelSelector": {"matchLabels": labels},
+                        "topologyKey": "kubernetes.io/hostname",
+                    }
+                ]
+        
+        return topology_spread
+
+    def anti_affinity_rule(self, spec, labels):
+        required = spec.get("required", True)
+        namespace = spec.get("namespace")
+
+        if required:
+            rule_type = "requiredDuringSchedulingIgnoredDuringExecution"
+            affinity = {
+                "podAntiAffinity": {
+                    rule_type: [
+                        {
+                            "labelSelector": {"matchLabels": labels},
+                            "namespaces": [namespace],
+                            "topologyKey": "kubernetes.io/hostname"
+                        }
+                    ]
+                }
+            }
+        else:
+            rule_type = "preferredDuringSchedulingIgnoredDuringExecution"
+            affinity = {
+                "podAntiAffinity": {
+                    rule_type: [
+                        {
+                            "weight": 1,
+                            "podAffinityTerm": {
+                                "labelSelector": {"matchLabels": labels},
+                                "namespaces": [namespace],
+                                "topologyKey": "kubernetes.io/hostname"
+                            }
+                        }
+                    ]
+                }
+            }
+
+        return affinity
+
+    def generate_applied_deployments(self, group: pd.DataFrame, rule_spec=None):
         """
         Generates a dictionary of applied deployments based on the rows of the DataFrame.
         """
+
+        #TO-DO: repensar design
+        if rule_spec:
+            rule_type = rule_spec.get("rule_type")
+        else:
+            rule_type = "no_rule"
+
+        if rule_type == "topology_spread":
+            get_rule = self.topology_spread_rule
+            rule_name = "topologySpreadConstraints"
+        elif rule_type == "anti_affinity":
+            get_rule = self.anti_affinity_rule
+            rule_name = "affinity"
+        elif rule_type == "no_rule":
+            rule_name = None
+        else:
+            raise ValueError(f"Unknown rule: {rule}")
+
+
         applied_deployments = {}
 
         for _, row in group[group['action'] == 'create'].iterrows():
@@ -91,9 +166,25 @@ class DeploymentsGenerator:
                     }
 
                 labels = {
-                    "app": "fake-pod",
+                    "app": row['replicaset'],
                     "deployment": row['replicaset']
                 }
+
+                if rule_name is not None:
+                    if rule_type == "anti_affinity":
+                        rule_spec['namespace'] = str(row["namespace"])
+
+                    rule = get_rule(rule_spec, labels)
+
+                    extra = {rule_name: rule}
+                else:
+                    extra = {}
+
+                if "affinity" in extra.keys():
+                    extra["affinity"]["nodeAffinity"] = affinity["nodeAffinity"]
+                else:
+                    extra["affinity"] = affinity
+
 
                 pod_template = {
                     "metadata": {"labels": labels},
@@ -110,6 +201,7 @@ class DeploymentsGenerator:
                                 },
                             }
                         ],
+                        **extra
                     },
                 }
 

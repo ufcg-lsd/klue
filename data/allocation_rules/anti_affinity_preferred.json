@@ -1,0 +1,4 @@
+{
+    "rule_type": "anti_affinity",
+    "required": false
+}
