@@ -17,6 +17,7 @@ usage() {
     echo "  --skip-tracer                             Pular a execução do tracer"
     echo "  --static-infra                            Usar infraestrutura estática na emulação"
     echo "  --static-workload                         Usar workload estático na emulação"
+    echo "  --allocation-rule PATH                    Especificar o caminho da regra de alocação a ser usada (Opicional)"
     echo "  -h, --help                                Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -90,6 +91,10 @@ while [[ $# -gt 0 ]]; do
             WORKLOAD="static"
             shift
             ;;
+        --allocation-rule)
+            ALLOCATION_RULE="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             ;;
@@ -141,5 +146,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE"
     cd ..
-    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD" "$EMULATION_NAME"
+    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD" "$EMULATION_NAME" "$ALLOCATION_RULE"
 fi
