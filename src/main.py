@@ -13,7 +13,7 @@ from tracer.tracer_cluster_autoscaler import TracerClusterAutoscaler
 from manager import Manager
 
 class Main:
-    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None):
+    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None, allocation_rule_path = None):
         self.trace_path = trace_path
         self.nodepool_path = nodepool_path
         self.karpenter = karpenter
