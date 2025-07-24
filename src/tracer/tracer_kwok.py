@@ -305,16 +305,18 @@ class TracerKWOKOnly:
         1. A list of all unique nodes involved in the allocation.
         2. A detailed summary of pod allocations grouped by namespace, node, replicaset,
            owner kind, and instance type.
+
+        Additionally, removes nodes that appear in only one timestamp.
         """
         self.log("[INFO] Processing and saving pods allocation.")
         df_pods_allocation = self.df_final[self.df_final['timestamp'] == self.df_final['timestamp'].min()]
 
         df_pods_allocation = df_pods_allocation[~df_pods_allocation["node"].isin(["unallocated"]) & ~df_pods_allocation["instance_type"].isin(["unallocated"])]
 
-        # Remove nodes that occur in just one timestamp
-        node_counts = df_pods_allocation.groupby('node')['timestamp'].nunique()
-        nodes_with_single_timestamp = node_counts[node_counts == 1].index.tolist()
-        df_pods_allocation = df_pods_allocation[~df_pods_allocation['node'].isin(nodes_with_single_timestamp)]
+        # Remove nodes that appear in only one timestamp in the whole trace
+        node_timestamp_counts = self.df_final.groupby('node')['timestamp'].nunique()
+        valid_nodes = node_timestamp_counts[node_timestamp_counts > 1].index
+        df_pods_allocation = df_pods_allocation[df_pods_allocation['node'].isin(valid_nodes)]
 
         self.df_pods_allocation = df_pods_allocation.groupby(['namespace', 'node', 'replicaset', 'owner_kind', 'instance_type']).agg(
             pods_count=('replicaset', 'count'),
