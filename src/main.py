@@ -35,6 +35,9 @@ class Main:
         specified node pool configuration to the Kubernetes cluster.
         """
         
+        if self.nodepool_path is None:
+            print("Node pool path is not specified. Skipping node pool application.")
+            return
         subprocess.run(["kubectl", "apply", "-f", self.nodepool_path])
 
     def run_tracer(self):
