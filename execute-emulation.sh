@@ -17,7 +17,7 @@ usage() {
     echo "  --skip-tracer                             Pular a execução do tracer"
     echo "  --static-infra                            Usar infraestrutura estática na emulação"
     echo "  --static-workload                         Usar workload estático na emulação"
-    echo "  --allocation-rule PATH                    Especificar o caminho da regra de alocação a ser usada (Opicional)"
+    echo "  --allocation-rule PATH                    Especificar o caminho da regra de alocação a ser usada (Opcional)"
     echo "  -h, --help                                Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -39,6 +39,8 @@ TRACER="no-skip"
 KARPENTER="karpenter-off"
 INFRASTRUCTURE="dynamic"
 WORKLOAD="dynamic"
+EMULATION_NAME=""
+ALLOCATION_RULE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -146,5 +148,36 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$CLUSTER_AUTOSCALER_PROVIDER_TEMPLATE"
     cd ..
-    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$KUBERNETES_AUTOSCALER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD" "$EMULATION_NAME" "$ALLOCATION_RULE"
+    
+    # Construir comando Python com argumentos opcionais
+    PYTHON_CMD="python3 src/main.py \"$TRACE_PATH\" \"$INFRASTRUCTURE\" \"$WORKLOAD\""
+    
+    # Adicionar argumentos opcionais se especificados
+    if [[ -n $NODEPOOL_PATH ]]; then
+        PYTHON_CMD="$PYTHON_CMD --nodepool-path \"$NODEPOOL_PATH\""
+    fi
+    
+    if [[ $KARPENTER == "karpenter-on" ]]; then
+        PYTHON_CMD="$PYTHON_CMD --karpenter"
+    fi
+    
+    if [[ $KUBERNETES_AUTOSCALER == "kubernetes-autoscaler-on" ]]; then
+        PYTHON_CMD="$PYTHON_CMD --cluster-autoscaler"
+    fi
+    
+    if [[ $TRACER == "skip-tracer" ]]; then
+        PYTHON_CMD="$PYTHON_CMD --skip-tracer"
+    fi
+    
+    if [[ -n $EMULATION_NAME ]]; then
+        PYTHON_CMD="$PYTHON_CMD --emulation-name \"$EMULATION_NAME\""
+    fi
+    
+    if [[ -n $ALLOCATION_RULE ]]; then
+        PYTHON_CMD="$PYTHON_CMD --allocation-rule \"$ALLOCATION_RULE\""
+    fi
+    
+    # Executar comando Python
+    echo "Executando: $PYTHON_CMD"
+    eval $PYTHON_CMD
 fi
