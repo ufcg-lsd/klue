@@ -82,7 +82,7 @@ class Collector:
             self.log(f"[ERROR] Request exception for metric {metric}: {e}")
             return None
 
-    def write_csv(self, output_dir):
+    def write_csv(self, output_dir, emulation_name=None):
         """
         Writes metrics data to CSV files in the specified output directory.
 
@@ -114,7 +114,11 @@ class Collector:
                 writer = csv.writer(f)
                 labelnames = list(results[0]["metric"].keys())
 
-                writer.writerow(["name", "timestamp", "value"] + labelnames)
+                header = ["name", "timestamp", "value"] + labelnames
+                if emulation_name:
+                    header.append("emulation_name")
+
+                writer.writerow(header)
 
                 for result in results:
                     for values in result["values"]:
@@ -124,6 +128,8 @@ class Collector:
                         for label in labelnames:
                             x = result["metric"].get(label, "")
                             row.append(x)
+                        if emulation_name:
+                            row.append(emulation_name)
                         writer.writerow(row)
 
     def collect(self, duration):
@@ -151,7 +157,7 @@ class Collector:
         
         
         os.makedirs(output_dir, exist_ok=True)
-        self.write_csv(output_dir)
+        self.write_csv(output_dir, self.emulation_name)
 
         # Zip the CSV files
         with zipfile.ZipFile(f"{output_dir}.zip", "w") as zip:

@@ -14,7 +14,7 @@ from tracer.tracer_cluster_autoscaler import TracerClusterAutoscaler
 from manager import Manager
 
 class Main:
-    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None, allocation_rule_path = None):
+    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None, allocation_rule_path = None, speed_up_factor = None):
         self.trace_path = trace_path
         self.nodepool_path = nodepool_path
         self.karpenter = karpenter
@@ -24,6 +24,7 @@ class Main:
         self.workload = workload
         self.emulation_name = emulation_name
         self.allocation_rule_path = allocation_rule_path
+        self.speed_up_factor = speed_up_factor
 
     def apply_nodepool(self):
         """
@@ -76,7 +77,7 @@ class Main:
         parameters and calls its run method to start the emulation.
         """
         # Executa o broker.py
-        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload, emulation_name = self.emulation_name )
+        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload, emulation_name = self.emulation_name, speed_up_factor = self.speed_up_factor )
         manager.run()
 
 def parse_arguments():
@@ -107,7 +108,10 @@ def parse_arguments():
                        help="Nome da emulação")
     parser.add_argument("--allocation-rule", 
                        help="Caminho da regra de alocação a ser usada")
-    
+    parser.add_argument("--speed-up", 
+                       type=int,
+                       help="Fator de aceleração da emulação (ex: 2, 5, 10)")
+
     args = parser.parse_args()
     
     if not args.cluster_autoscaler and not args.nodepool_path:
@@ -116,6 +120,9 @@ def parse_arguments():
     if args.karpenter and args.cluster_autoscaler:
         parser.error("Não é possível usar Karpenter e Kubernetes Cluster Autoscaler ao mesmo tempo")
     
+    if args.speed_up and args.speed_up <= 0:
+        parser.error("O fator de aceleração deve ser um número positivo")
+
     return args
 
 if __name__ == "__main__":
@@ -154,7 +161,8 @@ if __name__ == "__main__":
         infrastructure=args.infrastructure,
         workload=args.workload,
         emulation_name=args.emulation_name,
-        allocation_rule_path=args.allocation_rule
+        allocation_rule_path=args.allocation_rule,
+        speed_up_factor=args.speed_up
     )
 
 

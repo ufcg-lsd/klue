@@ -12,12 +12,13 @@ class InfrastructureManager:
     TIME_OUT = 200
     AMOUNT_OF_REAL_NODES = 1
 
-    def __init__(self, data_path, karpenter, emulation_phase):
+    def __init__(self, data_path, karpenter, emulation_phase, speed_up_factor=None):
         """
         Initializes the Manager class.
         """
         self.karpenter = karpenter
         self.emulation_phase = emulation_phase
+        self.speed_up_factor = speed_up_factor
 
         self.k8s_api = K8SAPI(timeout=self.TIME_OUT)
         self.k8s_object_applier = KubernetesObjectApplier(self.k8s_api)
@@ -111,6 +112,10 @@ class InfrastructureManager:
 
             # 3. Calculate how long we need to sleep
             sleep_duration_needed = target_event_start_wall_clock_time - current_wall_clock_time
+
+            # 4. If there is a speed-up factor, adjust the sleep duration
+            if self.speed_up_factor:
+                sleep_duration_needed /= self.speed_up_factor
 
             if sleep_duration_needed > 0:
                 time.sleep(sleep_duration_needed)

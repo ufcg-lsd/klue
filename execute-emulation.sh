@@ -18,6 +18,8 @@ usage() {
     echo "  --static-infra                            Usar infraestrutura estática na emulação"
     echo "  --static-workload                         Usar workload estático na emulação"
     echo "  --allocation-rule PATH                    Especificar o caminho da regra de alocação a ser usada (Opcional)"
+    echo "  --speed-up FACTOR                         Define um fator de aceleração para a emulação (ex: 2, 5, 10)."
+    echo "                                            Observação: ao utilizar este parâmetro, certifique-se de que o novo intervalo entre eventos seja superior a 30 segundos."
     echo "  -h, --help                                Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -41,6 +43,7 @@ INFRASTRUCTURE="dynamic"
 WORKLOAD="dynamic"
 EMULATION_NAME=""
 ALLOCATION_RULE=""
+SPEED_UP_FACTOR=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -95,6 +98,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --allocation-rule)
             ALLOCATION_RULE="$2"
+            shift 2
+            ;;
+        --speed-up)
+            SPEED_UP_FACTOR="$2"
             shift 2
             ;;
         -h|--help)
@@ -175,6 +182,10 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     
     if [[ -n $ALLOCATION_RULE ]]; then
         PYTHON_CMD="$PYTHON_CMD --allocation-rule \"$ALLOCATION_RULE\""
+    fi
+    
+    if [[ -n $SPEED_UP_FACTOR ]]; then
+        PYTHON_CMD="$PYTHON_CMD --speed-up \"$SPEED_UP_FACTOR\""
     fi
     
     # Executar comando Python
