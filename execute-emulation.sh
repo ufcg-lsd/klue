@@ -20,6 +20,7 @@ usage() {
     echo "  --allocation-rule PATH                    Especificar o caminho da regra de alocação a ser usada (Opcional)"
     echo "  --speed-up FACTOR                         Define um fator de aceleração para a emulação (ex: 2, 5, 10)."
     echo "                                            Observação: ao utilizar este parâmetro, certifique-se de que o novo intervalo entre eventos seja superior a 30 segundos."
+    echo "  --skip-pods-mapping                       Pular o mapeamento de pods e a execução do custom-scheduler"
     echo "  -h, --help                                Exibir esta mensagem de ajuda"
     exit 1
 }
@@ -44,6 +45,7 @@ WORKLOAD="dynamic"
 EMULATION_NAME=""
 ALLOCATION_RULE=""
 SPEED_UP_FACTOR=""
+SKIP_PODS_MAPPING=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -103,6 +105,10 @@ while [[ $# -gt 0 ]]; do
         --speed-up)
             SPEED_UP_FACTOR="$2"
             shift 2
+            ;;
+        --skip-pods-mapping)
+            SKIP_PODS_MAPPING="skip-pods-mapping"
+            shift
             ;;
         -h|--help)
             usage
@@ -176,6 +182,10 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
         PYTHON_CMD="$PYTHON_CMD --skip-tracer"
     fi
     
+    if [[ $SKIP_PODS_MAPPING == "skip-pods-mapping" ]]; then
+        PYTHON_CMD="$PYTHON_CMD --skip-pods-mapping"
+    fi
+
     if [[ -n $EMULATION_NAME ]]; then
         PYTHON_CMD="$PYTHON_CMD --emulation-name \"$EMULATION_NAME\""
     fi
@@ -187,7 +197,7 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     if [[ -n $SPEED_UP_FACTOR ]]; then
         PYTHON_CMD="$PYTHON_CMD --speed-up \"$SPEED_UP_FACTOR\""
     fi
-    
+
     # Executar comando Python
     echo "Executando: $PYTHON_CMD"
     eval $PYTHON_CMD

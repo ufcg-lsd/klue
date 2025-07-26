@@ -14,7 +14,7 @@ from tracer.tracer_cluster_autoscaler import TracerClusterAutoscaler
 from manager import Manager
 
 class Main:
-    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name = None, allocation_rule_path = None, speed_up_factor = None):
+    def __init__(self, trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, skip_pods_mapping, emulation_name = None, allocation_rule_path = None, speed_up_factor = None):
         self.trace_path = trace_path
         self.nodepool_path = nodepool_path
         self.karpenter = karpenter
@@ -22,6 +22,7 @@ class Main:
         self.tracer_skip = tracer_skip
         self.infrastructure = infrastructure
         self.workload = workload
+        self.skip_pods_mapping = skip_pods_mapping
         self.emulation_name = emulation_name
         self.allocation_rule_path = allocation_rule_path
         self.speed_up_factor = speed_up_factor
@@ -77,7 +78,7 @@ class Main:
         parameters and calls its run method to start the emulation.
         """
         # Executa o broker.py
-        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload, emulation_name = self.emulation_name, speed_up_factor = self.speed_up_factor )
+        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload, skip_pods_mapping = self.skip_pods_mapping, emulation_name = self.emulation_name, speed_up_factor = self.speed_up_factor )
         manager.run()
 
 def parse_arguments():
@@ -104,6 +105,9 @@ def parse_arguments():
     parser.add_argument("--skip-tracer", 
                        action="store_true", 
                        help="Pular a execução do tracer")
+    parser.add_argument("--skip-pods-mapping", 
+                       action="store_true", 
+                       help="Pular a execução do pods mapping")
     parser.add_argument("--emulation-name", 
                        help="Nome da emulação")
     parser.add_argument("--allocation-rule", 
@@ -160,6 +164,7 @@ if __name__ == "__main__":
         tracer_skip=args.skip_tracer,
         infrastructure=args.infrastructure,
         workload=args.workload,
+        skip_pods_mapping=args.skip_pods_mapping,
         emulation_name=args.emulation_name,
         allocation_rule_path=args.allocation_rule,
         speed_up_factor=args.speed_up

@@ -22,7 +22,7 @@ class Manager:
         data_path (string): The path of the JSON with the objects that will be applied by broker.
     """
 
-    def __init__(self, data_path='/tmp', karpenter=True, infrastructure=None, workload=None, emulation_name=None, speed_up_factor=None):
+    def __init__(self, data_path='/tmp', karpenter=True, infrastructure=None, workload=None, skip_pods_mapping=False, emulation_name=None, speed_up_factor=None):
         """
         Initializes the Manager class.
         """
@@ -35,6 +35,8 @@ class Manager:
 
         self.pods_mapping = PodsMapping(karpenter)
         self.collector = Collector(step=30, emulation_name=emulation_name)
+
+        self.skip_pods_mapping = skip_pods_mapping
 
         self.speed_up_factor = speed_up_factor
 
@@ -70,7 +72,8 @@ class Manager:
         self.infrastructure_manager.setup()
         self.workload_manager.setup()
 
-        self.start_mapping_and_scheduler()
+        if not self.skip_pods_mapping:
+            self.start_mapping_and_scheduler()
 
         self.workload_manager.before_emulation()
         self.infrastructure_manager.before_emulation()
