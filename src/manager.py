@@ -101,9 +101,10 @@ class Manager:
         workload_emulation_thread.join()
         self.log("[INFO] WorkloadManager emulation thread completed.")
 
-        duration = int((datetime.now() - start).total_seconds() + 15)
+        end = datetime.now()
+        duration = int((end - start).total_seconds())
         subprocess.run(["bash", "src/port-forward.sh"], check=True)
-        self.collector.collect(duration=duration)
+        self.collector.collect(start_time=start, end_time=end, duration=duration)
 
         self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
         self.infrastructure_manager.tear_down()

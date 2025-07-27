@@ -54,8 +54,11 @@ class Collector:
         """
         Fetches metrics from a Prometheus server within a specified time range.
         """
-        end_time = int(time.time())  # Current time as end
-        start_time = end_time - int(self.duration.total_seconds())  # Start time based on duration
+        # end_time = int(time.time())  # Current time as end
+        # start_time = end_time - int(self.duration.total_seconds())  # Start time based on duration
+
+        end_time = self.end_time.timestamp()
+        start_time = self.start_time.timestamp()
 
         if not self.step or self.step <= 0:
             self.log(f"[ERROR] Invalid step value: {self.step}. It must be a positive integer.")
@@ -132,7 +135,7 @@ class Collector:
                             row.append(emulation_name)
                         writer.writerow(row)
 
-    def collect(self, duration):
+    def collect(self, start_time, end_time, duration):
         """
         Collects metrics for a specified duration, writes them to CSV files, 
         and compresses the files into a ZIP archive.
@@ -146,7 +149,9 @@ class Collector:
             6. Logs the completion of the zipping process.
         """
         self.log(f"[INFO] Collecting metrics of this emulation for {duration} seconds.")
-        self.duration = timedelta(seconds=int(duration))
+        # self.duration = timedelta(seconds=int(duration))
+        self.start_time = start_time
+        self.end_time = end_time
         self.metrics = self.read_metrics()
         now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
