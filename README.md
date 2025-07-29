@@ -152,6 +152,6 @@ kubectl delete no --all
 - **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)  
 
 ## 👨‍🏫 Supervised by  
-- **Giovanni Farias – PhD, Federal University of Campina Grand
+- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
 - **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
 - **Thiago Emmanuel – PhD, Federal University of Campina Grande (UFCG)**  
