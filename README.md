@@ -57,12 +57,14 @@ Use an existing cluster and provide a trace file, it will start an emulation wit
 ```bash
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path>
 ```
+**OBS:** The `<trace-path>` should not ends with /, you need to provide a path in the format /path/to/trace
 
 #### 2. **Enable Karpenter (Dynamic Node Management)**
 If you want to use Karpenter for dynamic node management, you need to provide the path to the nodepool file:
 ```bash
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --use-karpenter --nodepool-path <nodepool-path>
 ```
+**OBS:** The `<trace-path>` should not ends with /, you need to provide a path in the format /path/to/trace
 
 #### 3. **Skip Tracer Step**
 Like we said before in [this guide](https://github.com/ufcg-lsd/klue/tree/main/docs/#INPUT), you can execute our emulation tool in a lot of scenarious. One of them, is the one which you have one input in the format of our tool. 
@@ -70,6 +72,7 @@ Add `--skip-tracer` to any command to skip the trace generation step:
 ```bash
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --skip-tracer
 ```
+**OBS:** The `<trace-path>` should not ends with /, you need to provide a path in the format /path/to/trace
 
 #### 5. **Static Infrastructure or Workload**
 Use static infrastructure and/or workload:
@@ -78,6 +81,7 @@ Use static infrastructure and/or workload:
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-workload
 ./execute_emulation.sh --sim --use-cluster <cluster-context> --data-path <trace-path> --static-infra --static-workload
 ```
+**OBS:** The `<trace-path>` should not ends with /, you need to provide a path in the format /path/to/trace
 
 #### 6. **Playground (Development) Mode**
 Set up a development environment (no emulation), it's just for test Karpenter actions manually:
@@ -124,7 +128,7 @@ We have 8 test cases, each one cover the different execution modes of the emulat
 
 When running the emulation multiple times on the same cluster, that are **three main steps** needed for guaranteeing that you will have a correct execution, these are:
 
-- **Removing all nodepools:**
+- **Removing all nodepools (only when using Karpenter):**
 ```bash
 kubectl delete nodepools --all
 ```
@@ -151,3 +155,4 @@ kubectl delete no --all
 - **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
 - **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**
 - **Thiago Manel – PhD, Federal University of Campina Grande (UFCG)**
+- 

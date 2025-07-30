@@ -31,8 +31,10 @@ install_docker() {
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
     sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo groupadd docker
     # Add current user to docker group to run without sudo
     sudo usermod -aG docker "${USER}"
+    newgrp docker
     echo "Docker installed successfully. Please logout and login again to use Docker without 'sudo'."
 }
 
@@ -120,6 +122,8 @@ install_kind() {
 
 # 8. Install Python libraries
 install_python_deps() {
+    sudo apt install python3.10-venv 
+
     # Check if a virtual environment is already activated
     if [ -n "$VIRTUAL_ENV" ]; then
         echo "A Python virtual environment is already activated: $VIRTUAL_ENV"
@@ -143,6 +147,14 @@ install_python_deps() {
     echo "Python libraries installed successfully."
 }
 
+# 8 Install auxiliary dependencies
+install_aux_deps() {
+    echo "Installing auxiliary dependencies..."
+    sudo apt-get update
+    sudo apt-get install -y \
+        jq
+}
+
 
 # --- Main Script Logic ---
 
@@ -160,6 +172,7 @@ case $choice in
     1)
         echo "--- Setting up EKS Environment ---"
         git submodule update --init --recursive
+        install_aux_deps
         install_docker
         install_kubectl
         install_helm
@@ -173,12 +186,15 @@ case $choice in
         echo "After configuring, you may need to login with 'aws sso login'."
         echo "--------------------------------"
         echo -e "${YELLOW}To ACTIVATE the Python virtual environment, run:${NC}"
-        echo "source venv/bin/activate${NC}"
+        echo "source venv/bin/activate"
+        echo -e "${YELLOW}Enter in your docker account by running:${NC}"
+        echo "docker login"
         echo "--------------------------------"
         ;;
     2)
         echo "--- Setting up Minikube Environment ---"
         git submodule update --init --recursive
+        install_aux_deps
         install_docker
         install_kubectl
         install_helm
@@ -187,8 +203,10 @@ case $choice in
         echo ""
         echo -e "${YELLOW}--- MANUAL ACTION REQUIRED ---${NC}"
         echo "--------------------------------"
-        echo "To ACTIVATE the Python virtual environment, run:"
-        echo -e "${YELLOW}source venv/bin/activate${NC}"
+        echo -e "${YELLOW}ACTIVATE the Python virtual environment, running:${NC}"
+        echo "source venv/bin/activate"
+        echo -e "${YELLOW}Enter in your docker account by running:${NC}"
+        echo "docker login"
         echo "--------------------------------"
         ;;
     3)

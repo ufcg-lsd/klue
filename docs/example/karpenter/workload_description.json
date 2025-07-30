@@ -1,0 +1,111 @@
+{
+    "setup": {
+        "default": [
+            {
+                "apiVersion": "apps/v1",
+                "kind": "Deployment",
+                "metadata": {
+                    "name": "default",
+                    "namespace": "default"
+                },
+                "spec": {
+                    "replicas": 40,
+                    "selector": {
+                        "matchLabels": {
+                            "app": "fake-pod",
+                            "deployment": "default"
+                        }
+                    },
+                    "template": {
+                        "metadata": {
+                            "labels": {
+                                "app": "fake-pod",
+                                "deployment": "default"
+                            }
+                        },
+                        "spec": {
+                            "schedulerName": "custom-scheduler",
+                            "affinity": {
+                                "nodeAffinity": {
+                                    "requiredDuringSchedulingIgnoredDuringExecution": {
+                                        "nodeSelectorTerms": [
+                                            {
+                                                "matchExpressions": [
+                                                    {
+                                                        "key": "karpenter.sh/nodepool",
+                                                        "operator": "In",
+                                                        "values": [
+                                                            "default"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            },
+                            "tolerations": [
+                                {
+                                    "key": "default",
+                                    "operator": "Exists",
+                                    "effect": "NoSchedule"
+                                }
+                            ],
+                            "containers": [
+                                {
+                                    "name": "fake-container",
+                                    "image": "fake-image",
+                                    "resources": {
+                                        "requests": {
+                                            "cpu": "1800m",
+                                            "memory": "3891Mi"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "emulation": [
+        {
+            "timestamp": 300,
+            "applied_objects": {},
+            "deleted_objects": [],
+            "scaled_replicasets": [
+                {
+                    "name": "default",
+                    "namespace": "default",
+                    "pods": 44,
+                    "kind": "deployment"
+                }
+            ]
+        },
+        {
+            "timestamp": 600,
+            "applied_objects": {},
+            "deleted_objects": [],
+            "scaled_replicasets": [
+                {
+                    "name": "default",
+                    "namespace": "default",
+                    "pods": 48,
+                    "kind": "deployment"
+                }
+            ]
+        },
+        {
+            "timestamp": 900,
+            "applied_objects": {},
+            "deleted_objects": [
+                {
+                    "name": "default",
+                    "namespace": "default"
+                }
+            ],
+            "scaled_replicasets": []
+        }
+    ]
+}
