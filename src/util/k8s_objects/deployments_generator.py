@@ -127,6 +127,10 @@ class DeploymentsGenerator:
                         }
                     ]
 
+                scheduler_name = {}
+                if not self.cluster_autoscaler:
+                    scheduler_name = {"schedulerName": "custom-scheduler"}
+
                 affinity = {}
                 if self.karpenter:
                     affinity = {
@@ -188,7 +192,7 @@ class DeploymentsGenerator:
                 pod_template = {
                     "metadata": {"labels": labels},
                     "spec": {
-                        **({"schedulerName": "custom-scheduler"} if not self.cluster_autoscaler else {}),
+                        **scheduler_name,
                         "affinity": affinity,
                         "tolerations": tolerations,
                         "containers": [

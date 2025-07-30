@@ -150,6 +150,7 @@ kubectl delete no --all
 - **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
 - **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
 - **Eric Matozo – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/ericmatozo/)  
+- **Caetano Albuquerque – Master's Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](www.linkedin.com/in/caetano-albuquerque/)  
 
 ## 👨‍🏫 Supervised by  
 - **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
