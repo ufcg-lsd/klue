@@ -98,7 +98,7 @@ class DeploymentsGenerator:
         elif rule_type == "no_rule":
             rule_name = None
         else:
-            raise ValueError(f"Unknown rule: {rule}")
+            raise ValueError(f"Unknown rule: {rule_type}")
 
 
         applied_deployments = {}
