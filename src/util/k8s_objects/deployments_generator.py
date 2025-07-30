@@ -85,7 +85,6 @@ class DeploymentsGenerator:
         Generates a dictionary of applied deployments based on the rows of the DataFrame.
         """
 
-        #TO-DO: repensar design
         if rule_spec:
             rule_type = rule_spec.get("rule_type")
         else:
