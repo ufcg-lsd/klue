@@ -75,6 +75,10 @@ class WorkloadManager:
         for entry in trace:
             entry_trace_timestamp = entry["timestamp"]
 
+            # Adjust the timestamp based on the speed-up factor if provided
+            if self.speed_up_factor:
+                entry_trace_timestamp /= self.speed_up_factor
+
             # 1. Calculate the target wall clock time for the START of this event
             target_event_start_wall_clock_time = emulation_start_wall_clock_time + entry_trace_timestamp
 
@@ -83,10 +87,6 @@ class WorkloadManager:
 
             # 3. Calculate how long we need to sleep
             sleep_duration_needed = target_event_start_wall_clock_time - current_wall_clock_time
-
-            # 4. If there is a speed-up factor, adjust the sleep duration
-            if self.speed_up_factor:
-                sleep_duration_needed /= self.speed_up_factor
 
             if sleep_duration_needed > 0:
                 time.sleep(sleep_duration_needed)
