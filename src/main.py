@@ -143,19 +143,6 @@ if __name__ == "__main__":
     4. Optionally skips the tracer step based on user input.
     5. Initializes and runs the Manager to handle the emulation process.
     """
-    # if len(sys.argv) < 3:
-    #     print(f"Uso: {sys.argv[0]} <data_path> <nodepool_path> <karpenter-on/off> <cluster_autoscaler-on/off> <skip-tracer/no-skip> <infrastructure> <workload>")
-    #     sys.exit(1)
-
-    # trace_path = sys.argv[1]
-    # nodepool_path = sys.argv[2]
-    # karpenter = True if (sys.argv[3] == "karpenter-on") else False
-    # cluster_autoscaler = True if (sys.argv[4] == "kubernetes-autoscaler-on") else False
-    # tracer_skip = True if (sys.argv[5] == "skip-tracer") else False
-    # infrastructure = sys.argv[6]
-    # workload = sys.argv[7]
-    # emulation_name = sys.argv[8]
-    # allocation_rule_path = sys.argv[9]
 
     args = parse_arguments()
 
@@ -172,9 +159,6 @@ if __name__ == "__main__":
         allocation_rule_path=args.allocation_rule,
         speed_up_factor=args.speed_up
     )
-
-
-    # main_instance = Main(trace_path, nodepool_path, karpenter, cluster_autoscaler, tracer_skip, infrastructure, workload, emulation_name, allocation_rule_path)
 
     main_instance.apply_nodepool()
 
