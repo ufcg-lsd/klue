@@ -17,3 +17,5 @@ src/custom-k8s-scheduler/custom-scheduler
 src/output*
 
 venv/
+
+orchestrator.py

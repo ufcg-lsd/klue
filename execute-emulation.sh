@@ -1,5 +1,13 @@
 #!/bin/bash
 
+LOG_FILE="/tmp/emulation.log"
+
+# Clear log at start
+: > "$LOG_FILE"
+
+# Redirect ALL output (stdout + stderr) to the log file
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 # Função para exibir a ajuda
 usage() {
     echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
@@ -116,5 +124,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER"
     cd ..
-    python3 src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
+    python3 -u src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
 fi
