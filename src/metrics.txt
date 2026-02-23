@@ -5,5 +5,6 @@ karpenter_pods_state
 kube_deployment_spec_replicas
 kube_pod_container_resource_requests
 container_cpu_usage_seconds_total
+container_memory_working_set_bytes
 kube_pod_status_phase
 kube_pod_info
