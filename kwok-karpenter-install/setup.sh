@@ -1,8 +1,8 @@
 go install github.com/google/ko@latest
 export PATH=$PATH:~/go/bin
 
-# source ~/.bashrc
-source ~/.zshrc
+source ~/.bashrc
+# source ~/.zshrc
 
 if [ $# -lt 1 ]; then
 	echo "Uso: $0 <karpenter-on/karpenter-off>"
@@ -40,9 +40,19 @@ fi
 
 ./install-kwok.sh
 
-while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
-  sleep 5
+while true; do
+	STATUS=$(kubectl get pod prometheus-k8s-0 -n monitoring \
+		-o jsonpath='{.status.phase}' 2>/dev/null)
+
+	if [[ "$STATUS" == "Running" ]]; then
+		break
+	fi
+
+	echo "Waiting for Prometheus to be available..."
+	sleep 5
 done
+
+echo "Prometheus is running."
 
 # -----------------------------
 # Grafana configuration
