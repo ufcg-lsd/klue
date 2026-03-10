@@ -4,3 +4,6 @@
 [submodule "kwok-karpenter-install/kube-prometheus"]
 	path = kwok-karpenter-install/kube-prometheus
 	url = https://github.com/prometheus-operator/kube-prometheus.git
+[submodule "kwok-karpenter-install/autoscaler"]
+	path = kwok-karpenter-install/autoscaler
+	url = git@github.com:kubernetes/autoscaler.git

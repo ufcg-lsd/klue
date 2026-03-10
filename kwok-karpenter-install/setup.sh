@@ -86,3 +86,12 @@ kubectl -n monitoring wait \
 echo ""
 echo "✅ Grafana is ready!"
 echo "👉 Open: http://${MINIKUBE_IP}:32000"
+
+# -----------------------------
+# VPA configuration
+# -----------------------------
+
+cd autoscaler/vertical-pod-autoscaler
+./hack/vpa-up.sh
+
+cd ../../

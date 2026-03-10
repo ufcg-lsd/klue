@@ -7,3 +7,11 @@ kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATES
 
 kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/stage-fast.yaml"
 kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/metrics-usage.yaml"
+
+# Setup Metrics Server and Usage Metric
+
+kubectl apply -f configuration-files/usage-metrics.yaml
+
+minikube addons enable metrics-server
+
+kubectl delete clusterresourceusage usage-from-annotation --ignore-not-found=true
