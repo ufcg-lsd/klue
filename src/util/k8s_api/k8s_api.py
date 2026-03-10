@@ -84,6 +84,22 @@ class K8SAPI:
     def patch_cluster_custom_object(self, group, version, plural, name, body, **kwargs):
         return self.custom_api.patch_cluster_custom_object(group=group, version=version, plural=plural, name=name, body=body, **kwargs)
 
+    # Custom Objects Namespaced (ServiceMonitor, PrometheusRule, etc.)
+    def create_namespaced_custom_object(self, group, version, namespace, plural, body, **kwargs):
+        return self.custom_api.create_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, body=body, **kwargs)
+
+    def get_namespaced_custom_object(self, group, version, namespace, plural, name, **kwargs):
+        return self.custom_api.get_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, **kwargs)
+
+    def list_namespaced_custom_object(self, group, version, namespace, plural, **kwargs):
+        return self.custom_api.list_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, **kwargs)
+
+    def patch_namespaced_custom_object(self, group, version, namespace, plural, name, body, **kwargs):
+        return self.custom_api.patch_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, body=body, **kwargs)
+
+    def delete_namespaced_custom_object(self, group, version, namespace, plural, name, **kwargs):
+        return self.custom_api.delete_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, **kwargs)
+
     # Infrastructure creation and deletion
     def create_infrastructure_object(self, body, group=None, version=None, plural=None, **kwargs):
         kind = body.get("kind", "")

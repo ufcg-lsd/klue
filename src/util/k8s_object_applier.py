@@ -66,17 +66,19 @@ class KubernetesObjectApplier:
         """
         try:
             obj["metadata"].pop("resourceVersion", None)
-            self.k8s_api.patch_cluster_custom_object(
-                "monitoring.coreos.com", "v1", "servicemonitors", name, obj
-            )
+            group="monitoring.coreos.com"
+            version="v1"
+            plural="servicemonitors"
+            namespace="monitoring"
+            self.k8s_api.patch_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, body=obj)
             self.log(f"[INFO] ServiceMonitor {name} updated")
         except client.exceptions.ApiException as e:
             if e.status == 404:
                 obj["metadata"].pop("resourceVersion", None)
-                self.k8s_api.create_cluster_custom_object(
-                    "monitoring.coreos.com", "v1", "servicemonitors", obj
-                )
+                self.k8s_api.create_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, body=obj)
                 self.log(f"[INFO] ServiceMonitor {name} created")
+            else:
+                raise
 
     def apply_object(self, obj):
         """

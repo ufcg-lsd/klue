@@ -205,7 +205,6 @@ class WorkloadManager:
     
     def set_workload_usage(self, usage_info):
         try:
-            self.log(f"[AAAAAAAA]")
             self.usage_queue.put(usage_info)
         except Exception as e:
             self.log(f"[ERROR] Failed to send usage event: {e}")

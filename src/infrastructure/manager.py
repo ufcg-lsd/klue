@@ -55,7 +55,12 @@ class InfrastructureManager:
         """
         setup = self.data['setup']
         for infra_obj in setup:
+            node_name = infra_obj["metadata"]["name"]
             self.k8s_object_applier.apply_object(infra_obj)
+            self.log(f"[INFO] Node {node_name} applied.")
+            service_monitor = self.servicemonitor_generator.generate_service_monitor(node_name)
+            self.k8s_object_applier.apply_service_monitor(service_monitor, node_name)
+            self.log(f"[INFO] Service Monitor for Node {node_name} applied.")
 
         while self.input_data_node_count != self.node_count:
             nodes = self.k8s_api.list_node()
@@ -123,9 +128,10 @@ class InfrastructureManager:
                     try:
                         node_name = node['metadata']['name']
                         self.k8s_object_applier.apply_node(node, node['metadata']['name'])
+                        self.log(f"[INFO] Node {node_name} applied.")
                         service_monitor = self.servicemonitor_generator.generate_service_monitor(node_name)
                         self.k8s_object_applier.apply_service_monitor(service_monitor, node_name)
-                        self.log(f"[INFO] Node {node_name} applied.")
+                        self.log(f"[INFO] Service Monitor for Node {node_name} applied.")
                     except Exception as e:
                         self.log(f"[ERROR] Failed to apply node {node.get('metadata', {}).get('name', '')}: {e}")
 
@@ -133,8 +139,8 @@ class InfrastructureManager:
                     try:
                         self.k8s_api.delete_infrastructure_object(node_name)
                         self.log(f"[INFO] Node {node_name} deleted.")
-                        self.k8s_api.delete_cluster_custom_object(
-                            "monitoring.coreos.com", "v1", "servicemonitors", node_name
+                        self.k8s_api.delete_namespaced_custom_object(
+                            "monitoring.coreos.com", "v1", "monitoring", "servicemonitors", node_name
                         )
                         self.log(f"[INFO] ServiceMonitor for node {node_name} deleted.")
                     except Exception as e:
