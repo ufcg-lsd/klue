@@ -7,6 +7,7 @@ import json
 import time
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_object_applier import KubernetesObjectApplier
+from util.k8s_objects.servicemonitor_generator import ServiceMonitorGenerator
 
 class InfrastructureManager:
     TIME_OUT = 200
@@ -21,6 +22,8 @@ class InfrastructureManager:
 
         self.k8s_api = K8SAPI(timeout=self.TIME_OUT)
         self.k8s_object_applier = KubernetesObjectApplier(self.k8s_api)
+        
+        self.servicemonitor_generator = ServiceMonitorGenerator()
 
         with open(data_path, 'r', encoding="utf-8") as file:
             self.data = json.load(file)
@@ -118,7 +121,11 @@ class InfrastructureManager:
             if self.emulation_phase == "dynamic":
                 for node in entry.get('applied_objects', []):
                     try:
+                        node_name = node['metadata']['name']
                         self.k8s_object_applier.apply_node(node, node['metadata']['name'])
+                        service_monitor = self.servicemonitor_generator.generate_service_monitor(node_name)
+                        self.k8s_object_applier.apply_service_monitor(service_monitor, node_name)
+                        self.log(f"[INFO] Node {node_name} applied.")
                     except Exception as e:
                         self.log(f"[ERROR] Failed to apply node {node.get('metadata', {}).get('name', '')}: {e}")
 
@@ -126,6 +133,10 @@ class InfrastructureManager:
                     try:
                         self.k8s_api.delete_infrastructure_object(node_name)
                         self.log(f"[INFO] Node {node_name} deleted.")
+                        self.k8s_api.delete_cluster_custom_object(
+                            "monitoring.coreos.com", "v1", "servicemonitors", node_name
+                        )
+                        self.log(f"[INFO] ServiceMonitor for node {node_name} deleted.")
                     except Exception as e:
                         self.log(f"[ERROR] Failed to delete node {node_name}: {e}")
 
