@@ -125,3 +125,6 @@ class K8SAPI:
 
     def delete_infrastructure_object(self, name):
         return self.v1.delete_node(name=name)
+    
+    def delete_cluster_custom_object(self, group, version, plural, name, **kwargs):
+        return self.custom_api.delete_cluster_custom_object(group=group, version=version, plural=plural, name=name, **kwargs)

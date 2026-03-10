@@ -45,6 +45,11 @@ class KubernetesObjectApplier:
         """
         Aplica um objeto do tipo Node ao cluster.
         """
+        obj.setdefault("metadata", {}).setdefault("annotations", {})
+        obj["metadata"]["annotations"]["metrics.k8s.io/resource-metrics-path"] = (
+            f"/metrics/nodes/{name}/metrics/resource"
+        )
+
         try:
             obj["metadata"].pop("resourceVersion", None)
             self.k8s_api.patch_infrastructure_object(obj)
@@ -54,6 +59,24 @@ class KubernetesObjectApplier:
                 obj["metadata"].pop("resourceVersion", None)
                 self.k8s_api.create_infrastructure_object(obj)
                 self.log(f"[INFO] Node {name} created")
+
+    def apply_service_monitor(self, obj, name):
+        """
+        Aplica um objeto do tipo ServiceMonitor ao cluster.
+        """
+        try:
+            obj["metadata"].pop("resourceVersion", None)
+            self.k8s_api.patch_cluster_custom_object(
+                "monitoring.coreos.com", "v1", "servicemonitors", name, obj
+            )
+            self.log(f"[INFO] ServiceMonitor {name} updated")
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                obj["metadata"].pop("resourceVersion", None)
+                self.k8s_api.create_cluster_custom_object(
+                    "monitoring.coreos.com", "v1", "servicemonitors", obj
+                )
+                self.log(f"[INFO] ServiceMonitor {name} created")
 
     def apply_object(self, obj):
         """
