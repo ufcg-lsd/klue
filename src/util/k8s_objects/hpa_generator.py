@@ -1,7 +1,33 @@
 import pandas as pd
 
+"""
+Utility for generating Kubernetes HorizontalPodAutoscaler (HPA) manifests
+from pandas DataFrame rows.
+
+This class converts normalized row data into complete HPA YAML
+structures and groups them by action: create, delete, or update.
+
+Expected assumptions:
+- Input rows already contain converted data types.
+- CPU values are already normalized (for example, in millicores when applicable).
+- Memory values are already normalized (for example, in bytes when applicable).
+- Each received row includes an `action` field indicating the intended operation.
+"""
 class HPAGenerator:
-    def _build_metric_yaml(self, resource_name: str, metric_value: int | float, metric_type: str) -> dict | None:
+    """
+    Build the HPA metric block for a single resource.
+
+    Supports Kubernetes resource metrics for CPU and memory only.
+
+    Args:
+        resource_name: Resource name used by the HPA metric, such as "cpu" or "memory".
+        metric_value: Target value for the metric.
+        metric_type: Metric target type, such as utilization, average or value.
+
+    Returns:
+        A dictionary representing the metric block in the HPA spec.
+    """
+    def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str) -> dict | None:
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
 
@@ -33,6 +59,25 @@ class HPAGenerator:
             },
         }
 
+    """
+    Convert a single row of HPA data into a Kubernetes HPA manifest.
+
+    Required fields:
+    - horizontalpodautoscaler
+    - namespace
+
+    Optional fields:
+    - min_replicas
+    - max_replicas
+    - cpu / cpu_type
+    - memory / memory_type
+
+    Args:
+        row_data: Dictionary containing the HPA row data.
+
+    Returns:
+        A dictionary representing the HPA manifest.
+    """
     def hpa_row_to_yaml(self, row_data: dict) -> dict | None:
         name = row_data.get("horizontalpodautoscaler")
         namespace = row_data.get("namespace")
@@ -77,6 +122,26 @@ class HPAGenerator:
 
         return doc
 
+
+    """
+    Generate HPA payloads grouped by requested action.
+
+    The input DataFrame is expected to contain one row per HPA definition,
+    including an action column with one of the following values: 'create', 'update' or 'delete'.
+
+
+    Args:
+        group: DataFrame containing HPA definitions and action metadata.
+
+    Returns:
+        A tuple containing:
+        - new_hpa_objects:
+            Dictionary where keys are namespaces and values are lists of HPA manifests to create.
+        - deleted_hpa_objects:
+            List of dictionaries with name and namespace.
+        - updated_hpa_objects:
+            List of dictionaries containing the update action and the updated HPA manifest.
+    """
     def generate_hpa_objects(self, group: pd.DataFrame) -> tuple[list, list, list]:
         new_hpa_objects = {}
         deleted_hpa_objects = []
