@@ -10,6 +10,7 @@ from util.k8s_objects.deployments_generator import DeploymentsGenerator
 from util.k8s_objects.jobs_generator import JobsGenerator
 from util.k8s_objects.statefulsets_generator import StatefulSetsGenerator
 from util.k8s_objects.node_generator import NodeGenerator
+from util.k8s_objects.hpa_generator import HPAGenerator
 
 class K8SObjectGenerator:
     
@@ -19,6 +20,7 @@ class K8SObjectGenerator:
         self.deployments_generator = DeploymentsGenerator(karpenter=karpenter)
         self.statefulsets_generator = StatefulSetsGenerator()
         self.jobs_generator = JobsGenerator()
+        self.hpa_generator = HPAGenerator()
     
     def log(self, message):
         """
@@ -49,6 +51,9 @@ class K8SObjectGenerator:
         
         return applied_deployments, deleted_deployments, scaled_deployments
     
+    def generate_hpa(self, group: pd.DataFrame):
+        return self.hpa_generator.generate_hpa_objects(group)
+
     def generate_jobs(self):
         # TODO
         pass
