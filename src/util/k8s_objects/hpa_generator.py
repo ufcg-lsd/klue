@@ -150,6 +150,7 @@ class HPAGenerator:
         for row in group.itertuples():
             if row.action == 'create':
                 hpa_obj = self.hpa_row_to_yaml(row._asdict())
+                if not hpa_obj: continue
 
                 if row.namespace not in new_hpa_objects:
                     new_hpa_objects[row.namespace] = [hpa_obj]
@@ -164,6 +165,7 @@ class HPAGenerator:
             
             elif row.action == 'update':
                 hpa_obj = self.hpa_row_to_yaml(row._asdict())
+                if not hpa_obj: continue
 
                 updated_hpa_objects.append({
                     "action": "update-hpa",
