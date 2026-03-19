@@ -108,3 +108,23 @@ class KubernetesObjectApplier:
             self.apply_node(obj, name)
         else:
             self.log(f"[ERROR] Unsupported kind: {kind}")
+
+    def delete_object(self, delete_info):
+        """
+        Deleta um objeto Kubernetes, delegando para a função apropriada.
+        """
+        kind = delete_info.get("kind", "Deployment").lower()
+        name = delete_info["name"]
+        namespace = delete_info.get("namespace", "default")
+
+        if kind == "deployment":
+            self.k8s_api.delete_namespaced_deployment(name, namespace)
+            self.log(f"[INFO] Deployment {name} deleted in namespace {namespace}.")
+        elif kind == "horizontalpodautoscaler":
+            self.k8s_api.delete_namespaced_horizontal_pod_autoscaler(name, namespace)
+            self.log(f"[INFO] HorizontalPodAutoscaler {name} deleted in namespace {namespace}.")
+        elif kind == "statefulset":
+            self.k8s_api.delete_namespaced_stateful_set(name, namespace)
+            self.log(f"[INFO] StatefulSet {name} deleted in namespace {namespace}.")
+        else:
+            self.log(f"[ERROR] Unsupported kind for deletion: {kind}")

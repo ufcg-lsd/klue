@@ -135,7 +135,6 @@ class WorkloadManager:
                         kind = delete_info.get('kind', '<unknown>')
 
                         self.k8s_object_applier.delete_object(delete_info)
-                        self.log(f"[INFO] Deleted {kind} {name} in namespace {namespace}")
                     except Exception as e:
                         self.log(f"[ERROR] Failed to delete {kind} {name} in namespace {namespace}: {e}")
 
