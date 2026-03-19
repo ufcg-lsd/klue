@@ -11,6 +11,7 @@ from util.k8s_objects.jobs_generator import JobsGenerator
 from util.k8s_objects.statefulsets_generator import StatefulSetsGenerator
 from util.k8s_objects.node_generator import NodeGenerator
 from util.k8s_objects.hpa_generator import HPAGenerator
+from util.k8s_objects.usage_workload_action import UsageWorkloadActionGenerator
 
 class K8SObjectGenerator:
     
@@ -21,6 +22,7 @@ class K8SObjectGenerator:
         self.statefulsets_generator = StatefulSetsGenerator()
         self.jobs_generator = JobsGenerator()
         self.hpa_generator = HPAGenerator()
+        self.usage_workload_action = UsageWorkloadActionGenerator()
     
     def log(self, message):
         """
@@ -51,9 +53,14 @@ class K8SObjectGenerator:
         
         return applied_deployments, deleted_deployments, scaled_deployments
     
+    def generate_usage_workload_action(self, group: pd.DataFrame):
+        usage_workload_actions = self.usage_workload_action.generate_usage_workload_action(group)
+
+        return usage_workload_actions
+
     def generate_hpa(self, group: pd.DataFrame):
         return self.hpa_generator.generate_hpa_objects(group)
-
+    
     def generate_jobs(self):
         # TODO
         pass

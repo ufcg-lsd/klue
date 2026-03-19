@@ -73,7 +73,7 @@ class DeploymentsGenerator:
                         "tolerations": tolerations,
                         "containers": [
                             {
-                                "name": "fake-container",
+                                "name": row['replicaset'],
                                 "image": "fake-image",
                                 "resources": {
                                     "requests": {}
@@ -126,6 +126,6 @@ class DeploymentsGenerator:
         scaled_deployments = []
 
         for _, row in group[group['action'] == 'scale'].iterrows():
-            scaled_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "pods": row['pods'], "kind": row['owner_kind'].lower()})
+            scaled_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "pods": row['pods'], "kind": row['owner_kind'].lower(), "action": "scale"})
 
         return scaled_deployments
