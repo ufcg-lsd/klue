@@ -17,7 +17,8 @@ class K8SAPI:
         self.v1 = client.CoreV1Api()
         self.apps_v1 = client.AppsV1Api()
         self.custom_api = client.CustomObjectsApi()
-    
+        self.autoscaling_v2 = client.AutoscalingV2Api()
+
     def log(self, message):
         print(f"[K8SAPI] {message}")
 
@@ -70,6 +71,19 @@ class K8SAPI:
     # StatefulSets
     def patch_namespaced_stateful_set_scale(self, name, namespace, body, **kwargs):
         return self.apps_v1.patch_namespaced_stateful_set_scale(name=name, namespace=namespace, body=body, **kwargs)
+
+    # HPA
+    def read_namespaced_horizontal_pod_autoscaler(self, name, namespace, **kwargs):
+        return self.autoscaling_v2.read_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, **kwargs)
+
+    def create_namespaced_horizontal_pod_autoscaler(self, namespace, body, **kwargs):
+        return self.autoscaling_v2.create_namespaced_horizontal_pod_autoscaler(namespace=namespace, body=body, **kwargs)
+
+    def patch_namespaced_horizontal_pod_autoscaler(self, name, namespace, body, **kwargs):
+        return self.autoscaling_v2.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=body, **kwargs)
+
+    def delete_namespaced_horizontal_pod_autoscaler(self, name, namespace, **kwargs):
+        return self.autoscaling_v2.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, **kwargs)
 
     # Custom Objects (Karpenter e outros CRDs)
     def create_cluster_custom_object(self, group, version, plural, body, **kwargs):
