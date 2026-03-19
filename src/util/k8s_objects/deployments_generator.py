@@ -114,7 +114,7 @@ class DeploymentsGenerator:
         deleted_deployments = []
 
         for _, row in group[group['action'] == 'delete'].iterrows():
-            deleted_deployments.append({"name": row['replicaset'], "namespace": row['namespace']})
+            deleted_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "kind": row["owner_kind"]})
 
         return deleted_deployments
 
