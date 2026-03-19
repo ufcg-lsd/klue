@@ -22,12 +22,14 @@ class TracerKWOKOnly:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path):
+    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, sum_container_cpu_usage_seconds_total, sum_container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
         self.kube_pod_container_resource_requests_path = kube_pod_container_resource_requests_path
         self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total
+        self.sum_container_cpu_usage_seconds_total_path = sum_container_cpu_usage_seconds_total
+        self.sum_container_memory_usage_bytes_path = sum_container_memory_usage_bytes
         self.kube_pod_owner_path = kube_pod_owner_path
         self.kube_pod_status_phase_path = kube_pod_status_phase
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
@@ -48,6 +50,8 @@ class TracerKWOKOnly:
         self.log("[INFO] Loading data from CSV files.")
         self.kube_pod_container_resource_requests = pd.read_csv(self.kube_pod_container_resource_requests_path)
         self.container_cpu_usage_seconds_total = pd.read_csv(self.container_cpu_usage_seconds_total_path)
+        self.sum_container_memory_usage_bytes = pd.read_csv(self.sum_container_memory_usage_bytes_path)
+        self.sum_container_cpu_usage_seconds_total = pd.read_csv(self.sum_container_cpu_usage_seconds_total_path)
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
         self.kube_pod_status_phase = pd.read_csv(self.kube_pod_status_phase_path)
         self.kube_replicaset_owner = pd.read_csv(self.kube_replicaset_owner_path)
@@ -95,11 +99,15 @@ class TracerKWOKOnly:
         self.log("[INFO] Preprocessing dataframes.")
         self.kube_pod_container_resource_requests, \
         self.container_cpu_usage_seconds_total, \
+        self.sum_container_memory_usage_bytes, \
+        self.sum_container_cpu_usage_seconds_total, \
         self.kube_pod_owner, \
         self.kube_pod_status_phase, \
         self.kube_replicaset_owner = self.normalize_timestamps([
             self.kube_pod_container_resource_requests,
             self.container_cpu_usage_seconds_total,
+            self.sum_container_memory_usage_bytes,
+            self.sum_container_cpu_usage_seconds_total,
             self.kube_pod_owner,
             self.kube_pod_status_phase,
             self.kube_replicaset_owner
@@ -380,20 +388,74 @@ class TracerKWOKOnly:
                     - "scaled_replicasets" (list): Information about replicasets
                       that need scaling.
         """
-        workload_objects = {'setup': {}, 'emulation': []}
+        workload_objects = {
+            'setup': {
+                'applied_objects': {},
+                'workload_actions': []
+            },
+            'emulation': []
+        }
 
         first_timestamp = self.df_final['timestamp'].min()
 
-        for timestamp, group in self.df_final.groupby('timestamp'):
+        # =========================
+        # UNION DOS TIMESTAMPS
+        # =========================
+        timestamps = sorted(
+            set(self.df_final['timestamp']) |
+            set(self.df_container_usage['timestamp'])
+        )
+
+        for timestamp in timestamps:
+            timestamp = int(timestamp)
+
+            # =========================
+            # FILTRA DADOS
+            # =========================
+            group_final = self.df_final[self.df_final['timestamp'] == timestamp]
+            group_usage = self.df_container_usage[self.df_container_usage['timestamp'] == timestamp]
+            group_usage = group_usage.groupby(['namespace', 'replicaset']).agg(
+                            cpu_usage=('cpu_usage', 'sum'),
+                            memory_usage=('memory_usage', 'sum')
+                        ).reset_index()
+
+            # =========================
+            # DEPLOYMENT EVENTS (scale/create/delete)
+            # =========================
+            applied_objects = {}
+            deleted_objects = []
+            workload_actions_scale = []
+
+            if not group_final.empty:
+                applied_objects, deleted_objects, workload_actions_scale = \
+                    self.k8s_objects_generator.generate_deployments(group_final)
+
+            # =========================
+            # USAGE EVENTS (set-usage)
+            # =========================
+            workload_actions_usage = []
+
+            if not group_usage.empty:
+                workload_actions_usage = \
+                    self.k8s_objects_generator.generate_usage_workload_action(group_usage)
+
+            # =========================
+            # MERGE DOS WORKLOAD ACTIONS
+            # =========================
+            workload_actions = workload_actions_scale + workload_actions_usage
+
+            # =========================
+            # BUILD FINAL STRUCTURE
+            # =========================
             if timestamp == first_timestamp:
-                workload_objects['setup'], _, _ = self.k8s_objects_generator.generate_deployments(group)
+                workload_objects['setup']['applied_objects'] = applied_objects
+                workload_objects['setup']['workload_actions'] = workload_actions
             else:
-                applied_objects, deleted_objects, scaled_replicasets = self.k8s_objects_generator.generate_deployments(group)
                 workload_objects['emulation'].append({
-                    "timestamp": int(timestamp),
+                    "timestamp": timestamp,
                     "applied_objects": applied_objects,
                     "deleted_objects": deleted_objects,
-                    "scaled_replicasets": scaled_replicasets
+                    "workload_actions": workload_actions
                 })
 
         return workload_objects
@@ -522,6 +584,84 @@ class TracerKWOKOnly:
 
         with open('/tmp/infrastructure_description.json', 'w', encoding="utf-8") as f:
             f.write(infrastructure_objects_json)
+    
+    def build_container_usage_df(self):
+        """
+        Builds container-level usage dataframe (cpu + memory).
+        """
+
+        self.log("[INFO] Building container-level usage dataframe.")
+
+        # =========================
+        # RENAME BEFORE MERGE
+        # =========================
+        cpu_df = self.sum_container_cpu_usage_seconds_total.rename(
+            columns={'value': 'cpu_usage'}
+        )
+
+        mem_df = self.sum_container_memory_usage_bytes.rename(
+            columns={'value': 'memory_usage'}
+        )
+
+        # =========================
+        # MERGE CPU + MEMORY
+        # =========================
+        usage_df = pd.merge(
+            cpu_df[['timestamp', 'pod', 'namespace', 'cpu_usage']],
+            mem_df[['timestamp', 'pod', 'namespace', 'memory_usage']],
+            on=['timestamp', 'pod', 'namespace'],
+            how='outer'
+        )
+
+        # preencher gaps após merge
+        usage_df = usage_df.sort_values(['pod', 'timestamp'])
+
+        usage_df.to_csv("/tmp/derikiiii.csv", index=False)
+
+        # =========================
+        # ADD REPLICASET
+        # =========================
+        usage_df = pd.merge(
+            usage_df,
+            self.kube_pod_owner[['pod', 'owner_name']],
+            on='pod',
+            how='left'
+        ).rename(columns={'owner_name': 'replicaset'})
+
+        # =========================
+        # ADD DEPLOYMENT (REPLICASET OWNER)
+        # =========================
+        usage_df = pd.merge(
+            usage_df,
+            self.kube_replicaset_owner[['replicaset', 'owner_name']],
+            on='replicaset',
+            how='left'
+        )
+
+        # substituir replicaset pelo deployment (owner)
+        usage_df['replicaset'] = usage_df['owner_name'].combine_first(usage_df['replicaset'])
+
+        # remover coluna auxiliar
+        usage_df = usage_df.drop(columns=['owner_name'])
+
+        # =========================
+        # AGGREGATE BY REPLICASET
+        # =========================
+        usage_df = usage_df.groupby(
+            ['timestamp', 'namespace', 'replicaset']
+        ).agg(
+            cpu_usage=('cpu_usage', 'sum'),
+            memory_usage=('memory_usage', 'sum')
+        ).reset_index()
+
+        # =========================
+        # FINAL
+        # =========================
+        self.df_container_usage = usage_df
+
+        self.df_container_usage.to_csv("/tmp/df_container_usage.csv", index=False)
+
+        self.log("[INFO] Container usage dataframe built.")
 
     def run(self):
         """
@@ -538,6 +678,7 @@ class TracerKWOKOnly:
         self.merge_pods_state_with_resources()
         self.merge_pods_resources_with_pod_owner()
         self.merge_pods_resources_with_replicaset_owner()
+        self.build_container_usage_df()
         self.remove_not_considered_resources_and_namespaces()
         self.process_and_save_pods_allocation()
         self.process_and_save_infrastructure_objects()

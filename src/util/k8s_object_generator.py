@@ -10,6 +10,7 @@ from util.k8s_objects.deployments_generator import DeploymentsGenerator
 from util.k8s_objects.jobs_generator import JobsGenerator
 from util.k8s_objects.statefulsets_generator import StatefulSetsGenerator
 from util.k8s_objects.node_generator import NodeGenerator
+from util.k8s_objects.usage_workload_action import UsageWorkloadActionGenerator
 
 class K8SObjectGenerator:
     
@@ -19,6 +20,7 @@ class K8SObjectGenerator:
         self.deployments_generator = DeploymentsGenerator(karpenter=karpenter)
         self.statefulsets_generator = StatefulSetsGenerator()
         self.jobs_generator = JobsGenerator()
+        self.usage_workload_action = UsageWorkloadActionGenerator()
     
     def log(self, message):
         """
@@ -49,6 +51,11 @@ class K8SObjectGenerator:
         
         return applied_deployments, deleted_deployments, scaled_deployments
     
+    def generate_usage_workload_action(self, group: pd.DataFrame):
+        usage_workload_actions = self.usage_workload_action.generate_usage_workload_action(group)
+
+        return usage_workload_actions
+
     def generate_jobs(self):
         # TODO
         pass
