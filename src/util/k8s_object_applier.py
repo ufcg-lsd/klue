@@ -27,6 +27,16 @@ class KubernetesObjectApplier:
                 self.k8s_api.create_namespaced_deployment(namespace, obj)
                 self.log(f"[INFO] Deployment {name} created in namespace {namespace}.")
 
+    def apply_hpa(self, obj, namespace, name):
+        try:
+            self.k8s_api.read_namespaced_horizontal_pod_autoscaler(name, namespace)
+            self.k8s_api.patch_namespaced_horizontal_pod_autoscaler(name, namespace, obj)
+            self.log(f"[INFO] HorizontalPodAutoscaler {name} updated in namespace {namespace}.")
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                self.k8s_api.create_namespaced_horizontal_pod_autoscaler(namespace, obj)
+                self.log(f"[INFO] HorizontalPodAutoscaler {name} created in namespace {namespace}.")
+            
     def apply_nodeclaim(self, obj, name):
         """
         Aplica um objeto do tipo NodeClaim ao cluster.
@@ -90,6 +100,8 @@ class KubernetesObjectApplier:
 
         if kind == "deployment":
             self.apply_deployment(obj, namespace, name)
+        elif kind == "horizontalpodautoscaler":
+            self.apply_hpa(obj, namespace, name)
         elif kind == "nodeclaim":
             self.apply_nodeclaim(obj, name)
         elif kind == "node":
