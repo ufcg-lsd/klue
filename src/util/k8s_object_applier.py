@@ -2,11 +2,12 @@ from kubernetes import client
 from util.k8s_api.k8s_api import K8SAPI
 
 class KubernetesObjectApplier:
-    def __init__(self, k8s_api: K8SAPI):
+    def __init__(self, k8s_api: K8SAPI, hpa):
         """
         Inicializa a classe com a API do Kubernetes e uma função de log.
         """
         self.k8s_api = k8s_api
+        self.hpa = hpa
     
     def log(self, message):
         """
@@ -100,7 +101,7 @@ class KubernetesObjectApplier:
 
         if kind == "deployment":
             self.apply_deployment(obj, namespace, name)
-        elif kind == "horizontalpodautoscaler":
+        elif kind == "horizontalpodautoscaler" and self.hpa:
             self.apply_hpa(obj, namespace, name)
         elif kind == "nodeclaim":
             self.apply_nodeclaim(obj, name)
@@ -120,7 +121,7 @@ class KubernetesObjectApplier:
         if kind == "deployment":
             self.k8s_api.delete_namespaced_deployment(name, namespace)
             self.log(f"[INFO] Deployment {name} deleted in namespace {namespace}.")
-        elif kind == "horizontalpodautoscaler":
+        elif kind == "horizontalpodautoscaler" and self.hpa:
             self.k8s_api.delete_namespaced_horizontal_pod_autoscaler(name, namespace)
             self.log(f"[INFO] HorizontalPodAutoscaler {name} deleted in namespace {namespace}.")
         elif kind == "statefulset":
