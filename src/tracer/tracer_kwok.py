@@ -235,10 +235,14 @@ class TracerKWOKOnly:
         # Remove duplicate rows, keeping only unique ones
         df_merged = df_merged.drop_duplicates()
 
+        df_merged.to_csv("/tmp/df_merged_before_sum.csv")
+
         # Sum all occurrences of CPU and memory for each timestamp of a pod
         df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'instance_type', 'node', 'resource']).agg({
             'value': 'sum'
         }).reset_index()
+
+        df_merged.to_csv("/tmp/df_merged_after_sum.csv")
 
         # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory'
         df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'instance_type', 'node'],
@@ -294,6 +298,8 @@ class TracerKWOKOnly:
 
         self.df_final = df_merged.drop(columns=['owner_kind_x', 'owner_kind_y'])
 
+        self.df_final.to_csv("/tmp/df_final_after_merge_replicaset_owner.csv")
+
     def remove_not_considered_resources_and_namespaces(self):
         """
         Removes rows from the dataframe `df_final` that belong to namespaces or resource kinds 
@@ -319,6 +325,8 @@ class TracerKWOKOnly:
         self.log("[INFO] Processing and saving pods allocation.")
         df_pods_allocation = self.df_final[self.df_final['timestamp'] == self.df_final['timestamp'].min()]
 
+        df_pods_allocation.to_csv("/tmp/df_pods_allocation_not_final.csv")
+
         df_pods_allocation = df_pods_allocation[~df_pods_allocation["node"].isin(["unallocated"]) & ~df_pods_allocation["instance_type"].isin(["unallocated"])]
 
         # Remove nodes that appear in only one timestamp in the whole trace
@@ -326,6 +334,13 @@ class TracerKWOKOnly:
         valid_nodes = node_timestamp_counts[node_timestamp_counts > 1].index
         df_pods_allocation = df_pods_allocation[df_pods_allocation['node'].isin(valid_nodes)]
 
+        self.df_pods_allocation_test = df_pods_allocation.groupby(
+            ['namespace', 'node', 'replicaset', 'owner_kind', 'instance_type']
+        ).agg(
+            pods_count=('replicaset', 'count'),
+            pods=('pod', lambda x: list(x))
+        ).reset_index()
+        
         self.df_pods_allocation = df_pods_allocation.groupby(['namespace', 'node', 'replicaset', 'owner_kind', 'instance_type']).agg(
             pods_count=('replicaset', 'count'),
         ).reset_index()
@@ -653,6 +668,11 @@ class TracerKWOKOnly:
             cpu_usage=('cpu_usage', 'sum'),
             memory_usage=('memory_usage', 'sum')
         ).reset_index()
+
+        # =========================
+        # CONVERT MEMORY TO Gi
+        # =========================
+        usage_df['memory_usage'] = usage_df['memory_usage'] / (1024 ** 3)
 
         # =========================
         # FINAL

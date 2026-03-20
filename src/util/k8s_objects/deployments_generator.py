@@ -14,13 +14,13 @@ class DeploymentsGenerator:
         """
         Converts the CPU value to millicores (m) and returns it as a string.
         """
-        return f"{int(float(value) * 1000)}m"
+        return f"{float(value) * 1000}m"
 
     def put_memory_unity(self, value):
         """
         Converts the memory value from bytes to MiB and returns it as a string.
         """
-        mebibytes = int(value) // (2 ** 20)
+        mebibytes = int(value) / (2 ** 20)
         return f"{mebibytes}Mi"
 
     def generate_applied_deployments(self, group: pd.DataFrame):
