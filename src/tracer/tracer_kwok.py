@@ -74,22 +74,22 @@ class TracerKWOKOnly:
         """
         all_timestamps = dfs_list[0]['timestamp'].unique()
         all_timestamps.sort()
-        min_timestamp = all_timestamps[0]
-        max_timestamp = all_timestamps[-1]
+        
+        self.min_timestamp = all_timestamps[0]
+        self.max_timestamp = all_timestamps[-1]
         self.step = all_timestamps[1] - all_timestamps[0] if len(all_timestamps) > 1 else 0
 
         # Get normalized informations from all metrics
-        min_timestamp_normalized = min_timestamp - min_timestamp
-        max_timestamp_normalized = max_timestamp - min_timestamp
+        min_timestamp_normalized = 0
+        max_timestamp_normalized = self.max_timestamp - self.min_timestamp
         timestamps = list(range(min_timestamp_normalized, max_timestamp_normalized + 1, self.step))
 
         # Normalize the timestamps of each DataFrame
         normalized_dfs = []
         for df in dfs_list:
             if "timestamp" in df.columns:
-                min_timestamp = df["timestamp"].min()
                 df = df.copy()
-                df["timestamp"] = df["timestamp"] - min_timestamp
+                df["timestamp"] = df["timestamp"] - self.min_timestamp
                 # Filter to keep only the timestamps that are in the fixed list
                 df = df[df["timestamp"].isin(timestamps)]
             normalized_dfs.append(df)
@@ -349,7 +349,7 @@ class TracerKWOKOnly:
         df.loc[utilization_mask, "value"] = pd.to_numeric(df.loc[utilization_mask, "value"], errors="coerce").clip(0, 100)
 
         # Converting dataframe from long to wide.
-        keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+        keys = ["timestamp", "horizontalpodautoscaler", "namespace", "__replica__"]
         values = (
             df.pivot_table(
                 index=keys,
@@ -374,9 +374,46 @@ class TracerKWOKOnly:
         )
 
         return values.merge(types, on=keys, how="outer")
-    
+
+
     """
-    Builds hpa metrics dataframe for given hpa metrics
+    Builds a segment id for each row based on metric changes within each object.
+
+    Rows are grouped by the object identifier`id_cols`. For each group, a new segment starts
+    whenever any metric column in `metric_cols` changes compared to the previous row.
+    """
+    def _build_segments(self, df: pd.DataFrame, id_cols: list[str], metric_cols: list[str]) -> pd.Series:
+        segment_by_index = {}
+
+        for _, group in df.groupby(id_cols, sort=False):
+            current_segment = 0
+            previous_metrics = None
+
+            for row in group.itertuples():
+                current_metrics = tuple(
+                    None if pd.isna(getattr(row, col)) else getattr(row, col)
+                    for col in metric_cols
+                )
+
+                if previous_metrics is not None and current_metrics != previous_metrics:
+                    current_segment += 1
+
+                segment_by_index[row.Index] = current_segment
+                previous_metrics = current_metrics
+
+        return pd.Series(segment_by_index)
+
+
+    """
+    Builds a compact HPA metrics dataframe from multiple metric sources.
+
+    The method merges the HPA metric inputs by timestamp, HPA name, namespace, and
+    collector replica. When the same HPA/timestamp is available from multiple
+    `__replica__` sources, it keeps the source that appears most often for that HPA.
+    If there is a tie, the lexicographically smaller `__replica__` is selected.
+
+    After source selection, the method compacts consecutive rows that represent the
+    same HPA metric state into time ranges using `timestamp` and `last_timestamp`.
     """
     def build_hpa_metrics(
         self,
@@ -384,34 +421,35 @@ class TracerKWOKOnly:
         spec_min_replicas: pd.DataFrame, 
         spec_target_metric_wide: pd.DataFrame
     ) -> pd.DataFrame:
-    
-        join_keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+        join_keys = ["timestamp", "horizontalpodautoscaler", "namespace", "__replica__"]
+        id_cols = ["namespace", "horizontalpodautoscaler"]
+        metric_cols = ["max_replicas", "min_replicas", "cpu", "memory", "cpu_type", "memory_type"]
 
-        hpa_metrics_join = (
+        hpa_metrics = (
             spec_max_replicas.merge(spec_min_replicas, on=join_keys, how="outer")
             .merge(spec_target_metric_wide, on=join_keys, how="outer")
         )
 
-        hpa_metrics_join.to_csv("/tmp/hpa_metrics_join.csv")
-
-        group_cols = [
-            "max_replicas",
-            "horizontalpodautoscaler",
-            "namespace",
-            "min_replicas",
-            "cpu",
-            "memory",
-            "cpu_type",
-            "memory_type",
-            "__replica__"
-        ]
-
-        hpa_metrics_agg = (
-            hpa_metrics_join.groupby(group_cols, dropna=False, as_index=False)
-            .agg(timestamp=("timestamp", "min"), last_timestamp=("timestamp", "max"))
+        hpa_metrics = (
+            hpa_metrics
+            .assign(count_metric_source=lambda x: x.groupby(["namespace", "horizontalpodautoscaler", "__replica__"])["__replica__"].transform("size"))
+            .sort_values(by=["namespace", "horizontalpodautoscaler", "timestamp", "count_metric_source", "__replica__"], ascending=[True, True, True, False, True], kind="mergesort")
+            .drop_duplicates(subset=["namespace", "horizontalpodautoscaler", "timestamp"], keep="first")
+            .drop(columns=["count_metric_source", "__replica__"])
+            .reset_index(drop=True)
         )
 
-        return hpa_metrics_agg
+        hpa_metrics["_segment"] = self._build_segments(hpa_metrics, id_cols, metric_cols)
+
+        hpa_metrics = (
+            hpa_metrics
+            .groupby(["namespace", "horizontalpodautoscaler", "_segment"] + metric_cols, dropna=False, as_index=False)
+            .agg(timestamp=("timestamp", "min"), last_timestamp=("timestamp", "max"))
+            .drop(columns=["_segment"])
+            .reset_index(drop=True)
+        )
+
+        return hpa_metrics
 
     def build_hpa_trace(self):
         self.log("[INFO] Building optional HPA trace.")
@@ -446,7 +484,7 @@ class TracerKWOKOnly:
         apply_action["action"] = "apply"
 
         delete_rows = hpa_metrics.groupby(["namespace", "horizontalpodautoscaler"], as_index=False).tail(1).copy()
-        delete_rows["timestamp"] = delete_rows["last_timestamp"].astype(int)
+        delete_rows["timestamp"] = min(delete_rows["last_timestamp"].astype(int) + self.step, self.max_timestamp)
         delete_rows["action"] = "delete"
 
         self.df_hpa_trace = pd.concat([apply_action, delete_rows], ignore_index=True, sort=False)
