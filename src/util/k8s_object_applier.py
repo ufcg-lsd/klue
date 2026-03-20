@@ -2,7 +2,7 @@ from kubernetes import client
 from util.k8s_api.k8s_api import K8SAPI
 
 class KubernetesObjectApplier:
-    def __init__(self, k8s_api: K8SAPI, hpa):
+    def __init__(self, k8s_api: K8SAPI, hpa=False):
         """
         Inicializa a classe com a API do Kubernetes e uma função de log.
         """
