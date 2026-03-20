@@ -6,6 +6,7 @@ It merges multiple sources of pod-related data, and outputs structured trace and
 import json
 import pandas as pd
 from util.k8s_object_generator import K8SObjectGenerator
+import os
 
 class TracerKWOKOnly:
     """
@@ -22,7 +23,7 @@ class TracerKWOKOnly:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, sum_container_cpu_usage_seconds_total, sum_container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path):
+    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, sum_container_cpu_usage_seconds_total, sum_container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
@@ -34,6 +35,9 @@ class TracerKWOKOnly:
         self.kube_pod_status_phase_path = kube_pod_status_phase
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
         self.instance_types_path = instance_types_path
+        self.hpa_spec_max_replicas_path = hpa_spec_max_replicas_path
+        self.hpa_spec_min_replicas_path = hpa_spec_min_replicas_path
+        self.hpa_target_metric_path = hpa_target_metric_path
         self.k8s_objects_generator = K8SObjectGenerator(karpenter=False)
 
     def log(self, message):
@@ -55,6 +59,10 @@ class TracerKWOKOnly:
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
         self.kube_pod_status_phase = pd.read_csv(self.kube_pod_status_phase_path)
         self.kube_replicaset_owner = pd.read_csv(self.kube_replicaset_owner_path)
+        self.hpa_spec_max_replicas = pd.read_csv(self.hpa_spec_max_replicas_path)
+        self.hpa_spec_min_replicas = pd.read_csv(self.hpa_spec_min_replicas_path)
+        self.hpa_target_metric = pd.read_csv(self.hpa_target_metric_path)
+
 
     def normalize_timestamps(self, dfs_list):
         """
@@ -103,14 +111,20 @@ class TracerKWOKOnly:
         self.sum_container_cpu_usage_seconds_total, \
         self.kube_pod_owner, \
         self.kube_pod_status_phase, \
-        self.kube_replicaset_owner = self.normalize_timestamps([
+        self.kube_replicaset_owner, \
+        self.hpa_spec_max_replicas, \
+        self.hpa_spec_min_replicas, \
+        self.hpa_target_metric = self.normalize_timestamps([
             self.kube_pod_container_resource_requests,
             self.container_cpu_usage_seconds_total,
             self.sum_container_memory_usage_bytes,
             self.sum_container_cpu_usage_seconds_total,
             self.kube_pod_owner,
             self.kube_pod_status_phase,
-            self.kube_replicaset_owner
+            self.kube_replicaset_owner,
+            self.hpa_spec_max_replicas,
+            self.hpa_spec_min_replicas,
+            self.hpa_target_metric
         ])
 
     def select_necessary_columns(self):
@@ -139,6 +153,14 @@ class TracerKWOKOnly:
         - On `self.kube_replicaset_owner`:
             - Removes duplicate rows based on 'replicaset', keeping the first occurrence.
             - Selects 'replicaset', 'owner_kind', and 'owner_name'.
+        - On `self.hpa_spec_max_replicas`:
+            - Selects 'timestamp', 'value', 'horizontalpodautoscaler' and 'namespace".
+            - Renames 'value' to 'min_replicas'.
+        - On `self.hpa_spec_min_replicas`:
+            - Selects 'timestamp', 'value', 'horizontalpodautoscaler' and 'namespace".
+            - Renames 'value' to 'max_replicas'.
+        - On `self.hpa_target_metric`:
+            - Selects 'timestamp', 'value', 'metric_name', 'horizontalpodautoscaler', 'namespace', 'metric_target_type'
         """
 
         # Selecting only the desired final columns
@@ -161,6 +183,10 @@ class TracerKWOKOnly:
 
         self.kube_replicaset_owner = self.kube_replicaset_owner.drop_duplicates(subset='replicaset', keep='first')
         self.kube_replicaset_owner = self.kube_replicaset_owner[['replicaset', 'owner_kind', 'owner_name']]
+
+        self.hpa_spec_max_replicas = self.hpa_spec_max_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "max_replicas"})
+        self.hpa_spec_min_replicas = self.hpa_spec_min_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "min_replicas"})
+        self.hpa_target_metric = self.hpa_target_metric.loc[:, ["timestamp", "value", "metric_name", "horizontalpodautoscaler", "namespace", "metric_target_type"]]
 
     def merge_container_usage_with_pods_phase(self):
         """
@@ -310,6 +336,117 @@ class TracerKWOKOnly:
 
         self.df_final = self.df_final[~self.df_final['owner_kind'].isin(['DaemonSet', 'Job'])]
 
+    """
+    Converts spec_target_metrics from long to wide.
+    """
+    def process_hpa_target_metrics(self, spec_target_metric: pd.DataFrame) -> pd.DataFrame:
+        resources = ("cpu", "memory")
+
+        df = spec_target_metric.loc[spec_target_metric["metric_name"].isin(resources)]
+
+        # Limits utilization metrics to the interval [0, 100]
+        utilization_mask = df["metric_target_type"].astype(str).str.lower().eq("utilization")
+        df.loc[utilization_mask, "value"] = pd.to_numeric(df.loc[utilization_mask, "value"], errors="coerce").clip(0, 100)
+
+        # Converting dataframe from long to wide.
+        keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+        values = (
+            df.pivot_table(
+                index=keys,
+                columns="metric_name",
+                values="value",
+                aggfunc="max",
+            )
+            .reindex(columns=resources)
+            .reset_index()
+        )
+
+        types = (
+            df.pivot_table(
+                index=keys,
+                columns="metric_name",
+                values="metric_target_type",
+                aggfunc="first",
+            )
+            .reindex(columns=resources)
+            .reset_index()
+            .rename(columns={"cpu": "cpu_type", "memory": "memory_type"})
+        )
+
+        return values.merge(types, on=keys, how="outer")
+    
+    """
+    Builds hpa metrics dataframe for given hpa metrics
+    """
+    def build_hpa_metrics(
+        self,
+        spec_max_replicas: pd.DataFrame, 
+        spec_min_replicas: pd.DataFrame, 
+        spec_target_metric_wide: pd.DataFrame
+    ) -> pd.DataFrame:
+    
+        join_keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+
+        hpa_metrics_join = (
+            spec_max_replicas.merge(spec_min_replicas, on=join_keys, how="outer")
+            .merge(spec_target_metric_wide, on=join_keys, how="outer")
+        )
+
+        group_cols = [
+            "max_replicas",
+            "horizontalpodautoscaler",
+            "namespace",
+            "min_replicas",
+            "cpu",
+            "memory",
+            "cpu_type",
+            "memory_type",
+        ]
+
+        hpa_metrics_agg = (
+            hpa_metrics_join.groupby(group_cols, dropna=False, as_index=False)
+            .agg(timestamp=("timestamp", "min"))
+        )
+
+        return hpa_metrics_agg
+
+    def build_hpa_trace(self):
+        self.log("[INFO] Building optional HPA trace.")
+
+        spec_target_metric_wide = self.process_hpa_target_metrics(self.hpa_target_metric)
+        hpa_metrics = self.build_hpa_metrics(
+            self.hpa_spec_max_replicas,
+            self.hpa_spec_min_replicas,
+            spec_target_metric_wide,
+        )
+
+        if hpa_metrics.empty:
+            self.df_hpa_trace = pd.DataFrame(columns=[
+                "timestamp",
+                "horizontalpodautoscaler",
+                "namespace",
+                "max_replicas",
+                "min_replicas",
+                "cpu",
+                "memory",
+                "cpu_type",
+                "memory_type",
+                "action",
+            ])
+            return
+
+        hpa_metrics = hpa_metrics.sort_values(["namespace", "horizontalpodautoscaler", "timestamp"]).reset_index(drop=True)
+
+        apply_action = hpa_metrics.copy()
+        apply_action["action"] = "apply"
+
+        delete_rows = hpa_metrics.groupby(["namespace", "horizontalpodautoscaler"], as_index=False).tail(1).copy()
+        delete_rows["timestamp"] = delete_rows["timestamp"].astype(int) + int(self.step)
+        delete_rows["action"] = "delete"
+
+        self.df_hpa_trace = pd.concat([apply_action, delete_rows], ignore_index=True, sort=False)
+        self.df_hpa_trace = self.df_hpa_trace.sort_values(["timestamp", "namespace", "horizontalpodautoscaler", "action"]).reset_index(drop=True)
+
     def process_and_save_pods_allocation(self):
         """
         Processes and saves pod allocation data.
@@ -375,6 +512,16 @@ class TracerKWOKOnly:
 
         self.df_final = df_adjusted[df_adjusted['pods_changed'] | (df_adjusted['action'].isin(['create', 'delete']))].drop(columns=['pods_changed'])
 
+    def merge_applied_objects(self, *objects_maps):
+        merged = {}
+
+        for objects_map in objects_maps:
+            for namespace, objects in objects_map.items():
+                merged.setdefault(namespace, [])
+                merged[namespace].extend(objects)
+
+        return merged
+
     def generate_workload_objects(self):
         """
         Generates structured workload objects for setup and emulation phases.
@@ -411,15 +558,17 @@ class TracerKWOKOnly:
             'emulation': []
         }
 
-        first_timestamp = self.df_final['timestamp'].min()
 
         # =========================
         # UNION DOS TIMESTAMPS
         # =========================
         timestamps = sorted(
             set(self.df_final['timestamp']) |
-            set(self.df_container_usage['timestamp'])
+            set(self.df_container_usage['timestamp']) |
+            set(self.df_hpa_trace['timestamp'])
         )
+
+        first_timestamp = min(timestamps)
 
         for timestamp in timestamps:
             timestamp = int(timestamp)
@@ -433,6 +582,8 @@ class TracerKWOKOnly:
                             cpu_usage=('cpu_usage', 'sum'),
                             memory_usage=('memory_usage', 'sum')
                         ).reset_index()
+            group_hpa = self.df_hpa_trace[self.df_hpa_trace['timestamp'] == timestamp]
+
 
             # =========================
             # DEPLOYMENT EVENTS (scale/create/delete)
@@ -444,6 +595,22 @@ class TracerKWOKOnly:
             if not group_final.empty:
                 applied_objects, deleted_objects, workload_actions_scale = \
                     self.k8s_objects_generator.generate_deployments(group_final)
+
+
+            # =========================
+            # HPA EVENTS (scale/create/delete)
+            # =========================     
+            applied_hpa_objects = {}
+            deleted_hpa_objects = []
+
+            if not group_hpa.empty:
+                applied_hpa_objects, deleted_hpa_objects = self.k8s_objects_generator.generate_hpa(group_hpa)
+
+            # =========================
+            # MERGING EVENTS (scale/create/delete)
+            # =========================    
+            applied_objects = self.merge_applied_objects(applied_objects, applied_hpa_objects)
+            deleted_objects = deleted_objects + deleted_hpa_objects
 
             # =========================
             # USAGE EVENTS (set-usage)
@@ -703,6 +870,7 @@ class TracerKWOKOnly:
         self.merge_pods_resources_with_replicaset_owner()
         self.build_container_usage_df()
         self.remove_not_considered_resources_and_namespaces()
+        self.build_hpa_trace()
         self.process_and_save_pods_allocation()
         self.process_and_save_infrastructure_objects()
         self.process_and_save_final_trace()

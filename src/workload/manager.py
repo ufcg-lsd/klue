@@ -57,11 +57,11 @@ class WorkloadManager:
 
         workload_actions = setup["workload_actions"]
 
-        self.log(f"[INFO] Deploying setup replicasets")
-        for namespace, deployments in applied_objects.items():
+        self.log(f"[INFO] Deploying setup objects")
+        for namespace, objects in applied_objects.items():
             self.create_namespace_if_not_exists(namespace)
-            for deploy in deployments:
-                self.k8s_object_applier.apply_object(deploy)
+            for object in objects:
+                self.k8s_object_applier.apply_object(object)
 
         self.wait_pods_ready()
 
@@ -130,12 +130,11 @@ class WorkloadManager:
                 # Delete workload objects
                 for delete_info in entry.get('deleted_objects', []):
                     try:
-                        name = delete_info['name']
-                        namespace = delete_info['namespace']
-                        kind = delete_info.get('kind', 'deployment')
+                        name = delete_info.get('name', '<unknown>')
+                        namespace = delete_info.get('namespace', '<unknown>')
+                        kind = delete_info.get('kind', '<unknown>')
 
-                        self.k8s_api.delete_namespaced_deployment(name, namespace)
-                        self.log(f"[INFO] Deleted {kind} {name} in namespace {namespace}")
+                        self.k8s_object_applier.delete_object(delete_info)
                     except Exception as e:
                         self.log(f"[ERROR] Failed to delete {kind} {name} in namespace {namespace}: {e}")
 
@@ -159,10 +158,17 @@ class WorkloadManager:
         The method uses a 2-second interval between checks to avoid excessive polling.
         """
         expected_pods = 0
+            
+        for namespace_objects in self.data['setup']['applied_objects'].values():
+            for obj in namespace_objects:
+                kind = obj.get("kind", "").lower()
+                replica_count = obj.get("spec", {}).get("replicas", 0)
 
-        for i in self.data['setup']['applied_objects'].keys():
-            for j in range(len(self.data['setup']['applied_objects'][i])):
-                expected_pods += self.data['setup']['applied_objects'][i][j]['spec']['replicas']
+                if kind in {"deployment", "statefulset"}:
+                    expected_pods += replica_count
+                elif replica_count:
+                    self.log(f"[WARNING] Object is not a Deployment or StatefulSet but has replicas={replica_count}. Counting it as workload.")
+                    expected_pods += replica_count
 
         while (current_pods := self.count_pods_excluding_namespaces()) != expected_pods:
             self.log(f"[INFO] Current pods: {current_pods}, Expected: {expected_pods}")
