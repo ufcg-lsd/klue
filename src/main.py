@@ -12,13 +12,14 @@ from tracer.tracer_kwok import TracerKWOKOnly
 from manager import Manager
 
 class Main:
-    def __init__(self, trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload):
+    def __init__(self, trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload, hpa):
         self.trace_path = trace_path
         self.nodepool_path = nodepool_path
         self.karpenter = karpenter
         self.tracer_skip = tracer_skip
         self.infrastructure = infrastructure
         self.workload = workload
+        self.hpa = hpa
     
     def apply_nodepool(self):
         """
@@ -66,7 +67,7 @@ class Main:
         parameters and calls its run method to start the emulation.
         """
         # Executa o broker.py
-        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload)
+        manager = Manager(karpenter=self.karpenter, infrastructure=self.infrastructure, workload=self.workload, hpa=self.hpa)
         manager.run()
 
 if __name__ == "__main__":
@@ -90,8 +91,9 @@ if __name__ == "__main__":
     tracer_skip = True if (sys.argv[4] == "skip-tracer") else False
     infrastructure = sys.argv[5]
     workload = sys.argv[6]
+    hpa = True if (sys.argv[7] == "karpenter-on") else False
 
-    main_instance = Main(trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload)
+    main_instance = Main(trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload, hpa)
 
     main_instance.apply_nodepool()
 

@@ -10,7 +10,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 # Função para exibir a ajuda
 usage() {
-    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
+    echo "Uso: $0 [--dev | --sim] [--use-cluster CONTEXT] [--data-path PATH] [--nodepool-path PATH] [--use-karpenter] [--use-hpa] [--skip-tracer] [--static-infra] [--static-workload] [-h | --help]"
     echo ""
     echo "Opções:"
     echo "  --dev                 Criar ambiente de desenvolvimento"
@@ -19,6 +19,7 @@ usage() {
     echo "  --data-path PATH      Especificar o caminho do trace a ser usado na emulação"
     echo "  --nodepool-path PATH  Especificar o caminho do nodepool a ser usado na emulação"
     echo "  --use-karpenter       Ativar o Karpenter para gerenciamento de nós"
+    echo "  --use-hpa           Ativar uso de HPA na emulação"
     echo "  --skip-tracer         Pular a execução do tracer"
     echo "  --static-infra        Usar infraestrutura estática na emulação"
     echo "  --static-workload     Usar workload estático na emulação"
@@ -43,6 +44,7 @@ TRACER="no-skip"
 KARPENTER="karpenter-off"
 INFRASTRUCTURE="dynamic"
 WORKLOAD="dynamic"
+HPA="hpa-off"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -69,6 +71,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --use-karpenter)
             KARPENTER="karpenter-on"
+            shift
+            ;;
+        --use-hpa)
+            HPA="hpa-on"
             shift
             ;;
         --skip-tracer)
@@ -124,5 +130,5 @@ elif [[ $ENVIRONMENT == "emulation" ]]; then
     cd kwok-karpenter-install
     ./setup.sh "$KARPENTER"
     cd ..
-    python3 -u src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD"
+    python3 -u src/main.py "$TRACE_PATH" "$NODEPOOL_PATH" "$KARPENTER" "$TRACER" "$INFRASTRUCTURE" "$WORKLOAD" "$HPA"
 fi

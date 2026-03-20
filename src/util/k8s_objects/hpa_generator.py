@@ -38,7 +38,7 @@ class HPAGenerator:
     Returns:
         A dictionary representing the metric block in the HPA spec.
     """
-    def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str) -> dict | None:
+    def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str):
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
 
@@ -93,7 +93,7 @@ class HPAGenerator:
     Returns:
         A dictionary representing the HPA manifest.
     """
-    def hpa_row_to_yaml(self, row_data: dict) -> dict | None:
+    def hpa_row_to_yaml(self, row_data: dict):
         name = row_data.get("horizontalpodautoscaler")
         namespace = row_data.get("namespace")
 
@@ -154,7 +154,7 @@ class HPAGenerator:
         - deleted_hpa_objects:
             List of dictionaries with name and namespace.
     """
-    def generate_hpa_objects(self, group: pd.DataFrame) -> tuple[dict, list]:
+    def generate_hpa_objects(self, group: pd.DataFrame):
         applied_hpa_objects = {}
         deleted_hpa_objects = []
 

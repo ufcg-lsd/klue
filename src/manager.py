@@ -22,7 +22,7 @@ class Manager:
         data_path (string): The path of the JSON with the objects that will be applied by broker.
     """
 
-    def __init__(self, data_path='/tmp', karpenter=True, infrastructure=None, workload=None):
+    def __init__(self, data_path='/tmp', karpenter=True, infrastructure=None, workload=None, hpa=True):
         """
         Initializes the Manager class.
         """
@@ -30,7 +30,7 @@ class Manager:
         self.workload = workload
 
         self.infrastructure_manager = InfrastructureManager(f"{data_path}/infrastructure_description.json", karpenter, infrastructure)
-        self.workload_manager = WorkloadManager(f"{data_path}/workload_description.json", workload)
+        self.workload_manager = WorkloadManager(f"{data_path}/workload_description.json", workload, hpa)
 
         self.pods_mapping = PodsMapping(karpenter)
         self.collector = Collector(step=30)

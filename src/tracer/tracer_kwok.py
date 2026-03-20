@@ -184,9 +184,9 @@ class TracerKWOKOnly:
         self.kube_replicaset_owner = self.kube_replicaset_owner.drop_duplicates(subset='replicaset', keep='first')
         self.kube_replicaset_owner = self.kube_replicaset_owner[['replicaset', 'owner_kind', 'owner_name']]
 
-        self.hpa_spec_max_replicas = self.hpa_spec_max_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "max_replicas"})
-        self.hpa_spec_min_replicas = self.hpa_spec_min_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "min_replicas"})
-        self.hpa_target_metric = self.hpa_target_metric.loc[:, ["timestamp", "value", "metric_name", "horizontalpodautoscaler", "namespace", "metric_target_type"]]
+        self.hpa_spec_max_replicas = self.hpa_spec_max_replicas.loc[:, ["timestamp", "value", "__replica__", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "max_replicas"})
+        self.hpa_spec_min_replicas = self.hpa_spec_min_replicas.loc[:, ["timestamp", "value", "__replica__", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "min_replicas"})
+        self.hpa_target_metric = self.hpa_target_metric.loc[:, ["timestamp", "value", "__replica__", "metric_name", "horizontalpodautoscaler", "namespace", "metric_target_type"]]
 
     def merge_container_usage_with_pods_phase(self):
         """
@@ -392,6 +392,8 @@ class TracerKWOKOnly:
             .merge(spec_target_metric_wide, on=join_keys, how="outer")
         )
 
+        hpa_metrics_join.to_csv("/tmp/hpa_metrics_join.csv")
+
         group_cols = [
             "max_replicas",
             "horizontalpodautoscaler",
@@ -401,11 +403,12 @@ class TracerKWOKOnly:
             "memory",
             "cpu_type",
             "memory_type",
+            "__replica__"
         ]
 
         hpa_metrics_agg = (
             hpa_metrics_join.groupby(group_cols, dropna=False, as_index=False)
-            .agg(timestamp=("timestamp", "min"))
+            .agg(timestamp=("timestamp", "min"), last_timestamp=("timestamp", "max"))
         )
 
         return hpa_metrics_agg
@@ -437,15 +440,18 @@ class TracerKWOKOnly:
 
         hpa_metrics = hpa_metrics.sort_values(["namespace", "horizontalpodautoscaler", "timestamp"]).reset_index(drop=True)
 
+        hpa_metrics.to_csv("/tmp/hpa_metrics.csv")
+
         apply_action = hpa_metrics.copy()
         apply_action["action"] = "apply"
 
         delete_rows = hpa_metrics.groupby(["namespace", "horizontalpodautoscaler"], as_index=False).tail(1).copy()
-        delete_rows["timestamp"] = delete_rows["timestamp"].astype(int) + int(self.step)
+        delete_rows["timestamp"] = delete_rows["last_timestamp"].astype(int)
         delete_rows["action"] = "delete"
 
         self.df_hpa_trace = pd.concat([apply_action, delete_rows], ignore_index=True, sort=False)
         self.df_hpa_trace = self.df_hpa_trace.sort_values(["timestamp", "namespace", "horizontalpodautoscaler", "action"]).reset_index(drop=True)
+        self.df_hpa_trace.to_csv("/tmp/hpa.csv")
 
     def process_and_save_pods_allocation(self):
         """

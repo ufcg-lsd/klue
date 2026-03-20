@@ -12,11 +12,12 @@ from workload.usage import UsageManager
 
 class WorkloadManager:
     TIME_OUT = 200
-    def __init__(self, data_path, emulation_phase):
+    def __init__(self, data_path, emulation_phase, hpa):
         """
         Initializes the Workload Manager class.
         """
         self.emulation_phase = emulation_phase
+        self.hpa = hpa
 
         self.k8s_api = K8SAPI(timeout=self.TIME_OUT)
         self.k8s_object_applier = KubernetesObjectApplier(self.k8s_api)
@@ -70,7 +71,7 @@ class WorkloadManager:
             action = workload_action["action"]
             if action == "set-usage":
                 self.set_workload_usage(workload_action)
-            elif action == "scale":
+            elif action == "scale" and not self.hpa:
                 self.scale_workload(workload_action)
 
     def before_emulation(self):
@@ -124,7 +125,7 @@ class WorkloadManager:
                     action = workload_action["action"]
                     if action == "set-usage":
                         self.set_workload_usage(workload_action)
-                    elif action == "scale":
+                    elif action == "scale" and not self.hpa:
                         self.scale_workload(workload_action)
 
                 # Delete workload objects
