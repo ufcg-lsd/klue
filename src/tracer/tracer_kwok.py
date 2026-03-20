@@ -618,6 +618,7 @@ class TracerKWOKOnly:
             columns={'value': 'memory_usage'}
         )
 
+
         # =========================
         # MERGE CPU + MEMORY
         # =========================
@@ -668,6 +669,8 @@ class TracerKWOKOnly:
             cpu_usage=('cpu_usage', 'sum'),
             memory_usage=('memory_usage', 'sum')
         ).reset_index()
+
+        usage_df = usage_df [usage_df['replicaset'].isin(self.df_final['replicaset'])]
 
         # =========================
         # CONVERT MEMORY TO Gi
