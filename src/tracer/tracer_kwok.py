@@ -22,13 +22,13 @@ class TracerKWOKOnly:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
+    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total_path, container_memory_usage_bytes_path, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
         self.kube_pod_container_resource_requests_path = kube_pod_container_resource_requests_path
-        self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total
-        self.container_memory_usage_bytes = container_memory_usage_bytes
+        self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total_path
+        self.container_memory_usage_bytes_path = container_memory_usage_bytes_path
         self.kube_pod_owner_path = kube_pod_owner_path
         self.kube_pod_status_phase_path = kube_pod_status_phase
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
@@ -52,7 +52,7 @@ class TracerKWOKOnly:
         self.log("[INFO] Loading data from CSV files.")
         self.kube_pod_container_resource_requests = pd.read_csv(self.kube_pod_container_resource_requests_path)
         self.container_cpu_usage_seconds_total = pd.read_csv(self.container_cpu_usage_seconds_total_path)
-        self.container_memory_usage_bytes = pd.read_csv(self.container_memory_usage_bytes)
+        self.container_memory_usage_bytes = pd.read_csv(self.container_memory_usage_bytes_path)
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
         self.kube_pod_status_phase = pd.read_csv(self.kube_pod_status_phase_path)
         self.kube_replicaset_owner = pd.read_csv(self.kube_replicaset_owner_path)
@@ -593,10 +593,6 @@ class TracerKWOKOnly:
             # =========================
             group_final = self.df_final[self.df_final['timestamp'] == timestamp]
             group_usage = self.df_container_usage[self.df_container_usage['timestamp'] == timestamp]
-            group_usage = group_usage.groupby(['namespace', 'replicaset']).agg(
-                            cpu_usage=('cpu_usage', 'sum'),
-                            memory_usage=('memory_usage', 'sum')
-                        ).reset_index()
             group_hpa = self.df_hpa_trace[self.df_hpa_trace['timestamp'] == timestamp]
 
             # =========================
@@ -783,35 +779,87 @@ class TracerKWOKOnly:
     
     def build_container_usage_df(self):
         """
-        Builds container-level usage dataframe (cpu + memory).
+        Builds workload usage dataframe from raw container CPU and memory metrics.
+        CPU is converted from cumulative counter to rate, aggregated pod -> workload.
+        Memory is aggregated as instantaneous usage, pod -> workload.
         """
-
-        self.log("[INFO] Building container-level usage dataframe.")
+        self.log("[INFO] Building workload usage dataframe from raw container metrics.")
 
         # =========================
-        # RENAME BEFORE MERGE
+        # CPU: RAW CONTAINER COUNTER -> POD CPU USAGE
         # =========================
-        cpu_df = self.sum_container_cpu_usage_seconds_total.rename(
-            columns={'value': 'cpu_usage'}
+        cpu_df = self.container_cpu_usage_seconds_total.copy()
+
+        cpu_df = cpu_df[
+            cpu_df["pod"].notna() & cpu_df["pod"].ne("") &
+            cpu_df["container"].notna() & cpu_df["container"].ne("")
+        ]
+
+        cpu_df["value"] = pd.to_numeric(cpu_df["value"], errors="coerce")
+
+        cpu_df = (
+            cpu_df
+            .groupby(["namespace", "pod", "container", "timestamp"], as_index=False)
+            .agg(value=("value", "max"))
+            .sort_values(["namespace", "pod", "container", "timestamp"])
         )
 
-        mem_df = self.sum_container_memory_usage_bytes.rename(
-            columns={'value': 'memory_usage'}
+        cpu_df["delta_value"] = cpu_df.groupby(["namespace", "pod", "container"])["value"].diff()
+        cpu_df["delta_time"] = cpu_df.groupby(["namespace", "pod", "container"])["timestamp"].diff()
+
+        cpu_df["cpu_usage"] = float("nan")
+
+        valid_cpu = (
+            cpu_df["delta_value"].notna() &
+            cpu_df["delta_time"].notna() &
+            cpu_df["delta_time"].gt(0) &
+            cpu_df["delta_value"].ge(0)
+        )
+
+        cpu_df.loc[valid_cpu, "cpu_usage"] = (
+            cpu_df.loc[valid_cpu, "delta_value"] / cpu_df.loc[valid_cpu, "delta_time"]
+        )
+
+        cpu_df = (
+            cpu_df
+            .groupby(["timestamp", "namespace", "pod"], as_index=False)[["cpu_usage"]]
+            .sum(min_count=1)
+        )
+
+        # =========================
+        # MEMORY: RAW CONTAINER GAUGE -> POD MEMORY USAGE
+        # =========================
+        mem_df = self.container_memory_usage_bytes.copy()
+
+        mem_df = mem_df[
+            mem_df["pod"].notna() & mem_df["pod"].ne("") &
+            mem_df["container"].notna() & mem_df["container"].ne("")
+        ]
+
+        mem_df["value"] = pd.to_numeric(mem_df["value"], errors="coerce")
+
+        mem_df = (
+            mem_df
+            .groupby(["namespace", "pod", "container", "timestamp"], as_index=False)
+            .agg(value=("value", "max"))
+        )
+
+        mem_df = (
+            mem_df
+            .groupby(["timestamp", "namespace", "pod"], as_index=False)[["memory_usage"]]
+            .sum(min_count=1)
         )
 
 
         # =========================
-        # MERGE CPU + MEMORY
+        # MERGE CPU + MEMORY AT POD LEVEL
         # =========================
         usage_df = pd.merge(
-            cpu_df[['timestamp', 'pod', 'namespace', 'cpu_usage']],
-            mem_df[['timestamp', 'pod', 'namespace', 'memory_usage']],
-            on=['timestamp', 'pod', 'namespace'],
-            how='outer'
-        )
-
-        # preencher gaps após merge
-        usage_df = usage_df.sort_values(['pod', 'timestamp'])
+            cpu_df,
+            mem_df,
+            on=["timestamp", "namespace", "pod"],
+            how="outer"
+        ).sort_values(["namespace", "pod", "timestamp"])
 
         # =========================
         # ADD REPLICASET
@@ -842,26 +890,25 @@ class TracerKWOKOnly:
         # =========================
         # AGGREGATE BY REPLICASET
         # =========================
-        usage_df = usage_df.groupby(
-            ['timestamp', 'namespace', 'replicaset']
-        ).agg(
-            cpu_usage=('cpu_usage', 'sum'),
-            memory_usage=('memory_usage', 'sum')
-        ).reset_index()
+        usage_df = (
+            usage_df
+            .groupby(["timestamp", "namespace", "replicaset"], as_index=False)[["cpu_usage", "memory_usage"]]
+            .sum(min_count=1)
+        )
 
-        usage_df = usage_df [usage_df['replicaset'].isin(self.df_final['replicaset'])]
+        usage_df = usage_df[usage_df['replicaset'].isin(self.df_final['replicaset'])]
 
         # =========================
-        # CONVERT MEMORY TO Gi
+        # CONVERT MEMORY TO GiB
         # =========================
         usage_df['memory_usage'] = usage_df['memory_usage'] / (1024 ** 3)
 
         # =========================
         # FINAL
         # =========================
+        usage_df = usage_df.dropna(subset=["cpu_usage", "memory_usage"], how="all")
         self.df_container_usage = usage_df
-
-        self.log("[INFO] Container usage dataframe built.")
+        self.log("[INFO] Workload usage dataframe built.")
 
     def run(self):
         """
