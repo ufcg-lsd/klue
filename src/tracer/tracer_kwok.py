@@ -841,7 +841,7 @@ class TracerKWOKOnly:
         mem_df = (
             mem_df
             .groupby(["namespace", "pod", "container", "timestamp"], as_index=False)
-            .agg(value=("value", "max"))
+            .agg(memory_usage=("value", "max"))
         )
 
         mem_df = (
@@ -925,8 +925,8 @@ class TracerKWOKOnly:
         self.merge_pods_state_with_resources()
         self.merge_pods_resources_with_pod_owner()
         self.merge_pods_resources_with_replicaset_owner()
-        self.build_container_usage_df()
         self.remove_not_considered_resources_and_namespaces()
+        self.build_container_usage_df()
         self.build_hpa_trace()
         self.process_and_save_pods_allocation()
         self.process_and_save_infrastructure_objects()
