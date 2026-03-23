@@ -91,7 +91,7 @@ if __name__ == "__main__":
     tracer_skip = True if (sys.argv[4] == "skip-tracer") else False
     infrastructure = sys.argv[5]
     workload = sys.argv[6]
-    hpa = True if (sys.argv[7] == "karpenter-on") else False
+    hpa = True if (sys.argv[7] == "hpa-on") else False
 
     main_instance = Main(trace_path, nodepool_path, karpenter, tracer_skip, infrastructure, workload, hpa)
 
