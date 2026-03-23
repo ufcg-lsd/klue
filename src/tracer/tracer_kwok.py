@@ -896,6 +896,16 @@ class TracerKWOKOnly:
             .sum(min_count=1)
         )
 
+        # ordenar antes de preencher
+        usage_df = usage_df.sort_values(["namespace", "replicaset", "timestamp"])
+
+        # preencher com valor do PRÓXIMO timestamp
+        usage_df[["cpu_usage", "memory_usage"]] = (
+            usage_df
+            .groupby(["namespace", "replicaset"])[["cpu_usage", "memory_usage"]]
+            .bfill()
+        )
+
         usage_df = usage_df[usage_df['replicaset'].isin(self.df_final['replicaset'])]
 
         # =========================
