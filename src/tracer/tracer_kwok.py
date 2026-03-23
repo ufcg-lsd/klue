@@ -127,50 +127,49 @@ class TracerKWOKOnly:
         Selects and renames essential columns, and performs initial filtering
         on various DataFrames used in the trace generation.
 
-
         Operations performed:
-        - On `self.container_cpu_usage_seconds_total`, to build self.pod_metadata:
-            - Selects 'timestamp', 'node_kubernetes_io_instance_type',
-              'kubernetes_io_hostname', and 'pod'.
+        - On `self.container_cpu_usage_seconds_total`, to build `self.pod_metadata`:
+            - Selects 'timestamp', 'namespace', 'node_kubernetes_io_instance_type',
+            'kubernetes_io_hostname', and 'pod'.
             - Renames 'node_kubernetes_io_instance_type' to 'instance_type'.
             - Renames 'kubernetes_io_hostname' to 'node'.
-            - Removes duplicate rows based on 'pod' and 'timestamp', keeping the first occurrence.
+            - Removes duplicate rows based on ('namespace', 'pod', 'timestamp'),
+            keeping the first occurrence.
         - On `self.container_cpu_usage_seconds_total`:
-            - Selects 'timestamp', 'namespace', 'pod', 'container', 'value'.
+            - Selects 'timestamp', 'namespace', 'pod', 'container', and 'value'.
         - On `self.container_memory_usage_bytes`:
-            - Selects 'timestamp', 'namespace', 'pod', 'container', 'value'.
+            - Selects 'timestamp', 'namespace', 'pod', 'container', and 'value'.
         - On `self.kube_pod_container_resource_requests`:
-            - Selects "timestamp", "pod", "namespace", "value", "resource",
-              and "node".
+            - Selects 'timestamp', 'pod', 'namespace', 'value', 'resource', and 'node'.
         - On `self.kube_pod_owner`:
-            - Removes duplicate rows based on 'pod', keeping the first occurrence.
-            - Selects 'pod', 'owner_name', and 'owner_kind'.
+            - Selects 'namespace', 'pod', 'owner_name', and 'owner_kind'.
+            - Removes duplicate rows from the selected set of columns.
         - On `self.kube_pod_status_phase`:
             - Filters out rows where the 'value' column (indicating phase activity) is 0.
-            - Selects 'timestamp', 'pod', and 'phase'.
+            - Selects 'timestamp', 'namespace', 'pod', and 'phase'.
         - On `self.kube_replicaset_owner`:
-            - Removes duplicate rows based on 'replicaset', keeping the first occurrence.
-            - Selects 'replicaset', 'owner_kind', and 'owner_name'.
+            - Selects 'namespace', 'replicaset', 'owner_kind', and 'owner_name'.
+            - Removes duplicate rows from the selected set of columns.
         - On `self.hpa_spec_max_replicas`:
-            - Selects 'timestamp', 'value', 'horizontalpodautoscaler' and 'namespace".
-            - Renames 'value' to 'min_replicas'.
-        - On `self.hpa_spec_min_replicas`:
-            - Selects 'timestamp', 'value', 'horizontalpodautoscaler' and 'namespace".
+            - Selects 'timestamp', 'value', 'horizontalpodautoscaler', and 'namespace'.
             - Renames 'value' to 'max_replicas'.
+        - On `self.hpa_spec_min_replicas`:
+            - Selects 'timestamp', 'value', 'horizontalpodautoscaler', and 'namespace'.
+            - Renames 'value' to 'min_replicas'.
         - On `self.hpa_target_metric`:
-            - Selects 'timestamp', 'value', 'metric_name', 'horizontalpodautoscaler', 'namespace', 'metric_target_type'
+            - Selects 'timestamp', 'value', 'metric_name',
+            'horizontalpodautoscaler', 'namespace', and 'metric_target_type'.
         """
-
         # Selecting only the desired final columns
         self.pod_metadata = (
             self.container_cpu_usage_seconds_total[
-                ['timestamp', 'node_kubernetes_io_instance_type', 'kubernetes_io_hostname', 'pod']
+                ['timestamp', 'namespace', 'node_kubernetes_io_instance_type', 'kubernetes_io_hostname', 'pod']
             ]
             .rename(columns={
                 'node_kubernetes_io_instance_type': 'instance_type',
                 'kubernetes_io_hostname': 'node'
             })
-            .drop_duplicates(subset=['pod', 'timestamp'], keep='first')
+            .drop_duplicates(subset=['namespace', 'pod', 'timestamp'], keep='first')
         )
 
         self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total[['timestamp', 'namespace', 'pod', 'container', 'value']]
@@ -178,14 +177,22 @@ class TracerKWOKOnly:
         
         self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]
 
-        self.kube_pod_owner = self.kube_pod_owner.drop_duplicates(subset='pod', keep='first')
-        self.kube_pod_owner = self.kube_pod_owner[['pod', 'owner_name', 'owner_kind']]
+        self.kube_pod_owner = (
+            self.kube_pod_owner[
+                ["namespace", "pod", "owner_name", "owner_kind"]
+            ]
+            .drop_duplicates()
+        )
 
         self.kube_pod_status_phase = self.kube_pod_status_phase[self.kube_pod_status_phase['value'] != 0]
-        self.kube_pod_status_phase = self.kube_pod_status_phase[['timestamp', 'pod', 'phase']]
+        self.kube_pod_status_phase = self.kube_pod_status_phase[['timestamp', 'namespace', 'pod', 'phase']]
 
-        self.kube_replicaset_owner = self.kube_replicaset_owner.drop_duplicates(subset='replicaset', keep='first')
-        self.kube_replicaset_owner = self.kube_replicaset_owner[['replicaset', 'owner_kind', 'owner_name']]
+        self.kube_replicaset_owner = (
+            self.kube_replicaset_owner[
+                ['namespace', 'replicaset', 'owner_kind', 'owner_name']
+            ]
+            .drop_duplicates()
+        )
 
         self.hpa_spec_max_replicas = self.hpa_spec_max_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "max_replicas"})
         self.hpa_spec_min_replicas = self.hpa_spec_min_replicas.loc[:, ["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "min_replicas"})
@@ -193,12 +200,13 @@ class TracerKWOKOnly:
 
     def merge_container_usage_with_pods_phase(self):
         """
-        Merges container CPU usage data with pod phase data.
+        Merges pod metadata with pod phase data.
 
-        This method performs a left merge of `self.container_cpu_usage_seconds_total`
-        (which contains CPU usage, node, and instance type information) with
-        `self.kube_pod_status_phase` (containing pod phase information) using
-        'timestamp' and 'pod' as merge keys.
+        This method performs a left merge of `self.pod_metadata`
+        (which contains namespace, pod, node, and instance type information)
+        with `self.kube_pod_status_phase` (containing pod phase information)
+        using ('timestamp', 'namespace', 'pod') as merge keys.
+
         Any resulting rows with missing 'phase' values are filled with 'Pending'.
         The final merged DataFrame is stored in `self.karpenter_pods_state`.
         """
@@ -206,7 +214,7 @@ class TracerKWOKOnly:
         self.karpenter_pods_state = pd.merge(
             self.pod_metadata,
             self.kube_pod_status_phase,
-            on=["timestamp", "pod"],
+            on=["timestamp", "namespace", "pod"],
             how="left"
         ).fillna({'phase': 'Pending'})
 
@@ -218,34 +226,33 @@ class TracerKWOKOnly:
 
         Steps:
         1. Merges `self.kube_pod_container_resource_requests` (source of resource
-           requests) with `self.karpenter_pods_state` (source of pod state,
-           node, instance type, and phase) using 'timestamp' and 'pod' as keys
-           (left join). Suffixes are used to distinguish columns from original
-           DataFrames if names clash (e.g., 'node').
-        2. The 'node' column in the merged DataFrame is populated using values
-           from `node_karpenter_state` (from `self.karpenter_pods_state`),
-           then original suffixed node columns are dropped.
-        3. Missing values in 'node', 'instance_type' are filled with "unallocated".
-           Missing 'phase' values are filled with "Pending".
-        4. Forward-fill and backward-fill are applied to propagate known pod
-           information across timestamps where it might be missing for that pod.
-        5. Duplicate rows are dropped.
-        6. Resource 'value's (CPU, memory) are summed up for each unique
-           combination of 'timestamp', 'pod', 'namespace', 'instance_type',
-           'node', and 'resource' type.
-        7. The DataFrame is pivoted to transform 'resource' types (e.g., 'cpu',
-           'memory') into distinct columns.
-        8. Rows where either the 'cpu' or 'memory' column still has a placeholder
-           'NA' (indicating missing data for that resource type) are filtered out.
-        9. The processed DataFrame is stored in `self.df_final`.
-        10. Logs the count of unique pods remaining in `self.df_final`.
+        requests) with `self.karpenter_pods_state` (source of pod state,
+        node, instance type, and phase) using ('timestamp', 'namespace', 'pod')
+        as keys (left join). Suffixes are used to distinguish columns from
+        the original DataFrames if names clash (for example, 'node').
+        2. Populates the output 'node' column using values from
+        `node_karpenter_state`, then drops the original suffixed node columns.
+        3. Fills missing values in 'node', 'instance_type', and 'phase' with
+        default placeholders.
+        4. Sorts the DataFrame by ('namespace', 'pod', 'timestamp') and applies
+        forward-fill and backward-fill within each ('namespace', 'pod') group
+        to propagate nearby values for selected columns.
+        5. Removes duplicate rows.
+        6. Sums resource 'value's for each unique combination of
+        'timestamp', 'pod', 'namespace', 'instance_type', 'node', and 'resource'.
+        7. Pivots the DataFrame to transform resource types (for example, 'cpu'
+        and 'memory') into separate columns.
+        8. Fills missing CPU and memory columns with 'NA' placeholders.
+        9. Filters out rows where either the 'cpu' or 'memory' column still has
+        the 'NA' placeholder.
+        10. Stores the processed DataFrame in `self.df_final`.
+        11. Logs the count of unique pods remaining in `self.df_final`.
         """
-        
-        # Direct merge using 'timestamp' and 'pod' as keys
+        # Direct merge using 'timestamp', 'namespace' and 'pod' as keys
         df_merged = pd.merge(
             self.kube_pod_container_resource_requests,
             self.karpenter_pods_state,
-            on=["timestamp", "pod"],
+            on=["timestamp", "namespace", "pod"],
             how="left",
             suffixes=('_resource_requests', '_karpenter_state')
         ).assign(
@@ -259,7 +266,14 @@ class TracerKWOKOnly:
         df_merged["phase"] = df_merged["phase"].fillna("Pending")
 
         # Filling the dataframe with the closest occurrence of this pod where there are NA values
-        df_merged = df_merged.ffill().bfill()
+        df_merged = df_merged.sort_values(["namespace", "pod", "timestamp"])
+
+        cols_to_fill = ["resource", "value", "node", "instance_type", "phase"]
+        df_merged[cols_to_fill] = (
+            df_merged.groupby(["namespace", "pod"])[cols_to_fill]
+            .ffill()
+            .bfill()
+        )
 
         # Remove duplicate rows, keeping only unique ones
         df_merged = df_merged.drop_duplicates()
@@ -289,13 +303,13 @@ class TracerKWOKOnly:
         Merges the main processed DataFrame (`self.df_final`) with pod
         ownership data (`self.kube_pod_owner`).
 
-        This is a left join on the 'pod' column, enriching `self.df_final`
+        This is a left join on ('namespace', 'pod'), enriching `self.df_final`
         with 'owner_name' and 'owner_kind' from `self.kube_pod_owner`.
-        The 'owner_name' column (typically representing a ReplicaSet name
-        at this stage) is then renamed to 'replicaset' in `self.df_final`
-        for clarity in subsequent steps.
+
+        The 'owner_name' column is then renamed to 'replicaset' in `self.df_final`
+        for use in subsequent ownership-resolution steps.
         """
-        self.df_final = pd.merge(self.df_final, self.kube_pod_owner, on='pod', how='left')
+        self.df_final = pd.merge(self.df_final, self.kube_pod_owner, on=["namespace", "pod"], how='left')
 
         self.df_final.rename(columns={'owner_name': 'replicaset'}, inplace=True)
 
@@ -304,18 +318,22 @@ class TracerKWOKOnly:
         Merges the main processed DataFrame (`self.df_final`) with ReplicaSet
         ownership data (`self.kube_replicaset_owner`).
 
-        This method performs a left join using the 'replicaset' column.
-        It then intelligently combines 'owner_kind' and 'owner_name' fields
-        that might exist with suffixes (e.g., 'owner_kind_x', 'owner_kind_y')
-        from the merge, prioritizing data from `kube_replicaset_owner` (`_y` suffix)
-        and then from `df_final` (`_x` suffix) if the former is missing.
-        The 'replicaset' column (which at this point might be the replicaset's
-        owner name, like a Deployment name) is also updated using `combine_first`
-        from the 'owner_name' field that comes from `kube_replicaset_owner`.
-        Redundant suffixed columns are then dropped.
-        The result updates `self.df_final`.
+        This method performs a left join using ('namespace', 'replicaset') as keys.
+
+        It then combines 'owner_kind' and 'owner_name' fields that may exist
+        with suffixes from the merge, prioritizing data from
+        `kube_replicaset_owner` and falling back to values already present
+        in `self.df_final` when needed.
+
+        The 'replicaset' column is also updated using `combine_first` with the
+        owner name obtained from `kube_replicaset_owner`, allowing the workflow
+        to move from ReplicaSet ownership to higher-level ownership such as a
+        Deployment when that mapping exists.
+
+        Redundant suffixed columns are then dropped, and the result updates
+        `self.df_final`.
         """
-        df_merged = pd.merge(self.df_final, self.kube_replicaset_owner, on='replicaset', how='left')
+        df_merged = pd.merge(self.df_final, self.kube_replicaset_owner, on=['namespace', 'replicaset'], how='left')
 
         df_merged['owner_kind'] = df_merged['owner_kind_y'].combine_first(df_merged['owner_kind_x'])
 
@@ -523,7 +541,11 @@ class TracerKWOKOnly:
         last_occurrences = df_adjusted.groupby(['replicaset','namespace']).tail(1).index
         df_adjusted.loc[last_occurrences, 'action'] = 'delete'
 
-        df_adjusted['pods_changed'] = df_adjusted.groupby('replicaset')['pods'].diff().fillna(1) != 0
+        df_adjusted['pods_changed'] = (
+            df_adjusted.groupby(['namespace', 'replicaset'])['pods']
+            .diff()
+            .fillna(1) != 0
+        )
 
         self.df_final = df_adjusted[df_adjusted['pods_changed'] | (df_adjusted['action'].isin(['create', 'delete']))].drop(columns=['pods_changed'])
 
@@ -866,8 +888,8 @@ class TracerKWOKOnly:
         # =========================
         usage_df = pd.merge(
             usage_df,
-            self.kube_pod_owner[['pod', 'owner_name']],
-            on='pod',
+            self.kube_pod_owner[['namespace', 'pod', 'owner_name']],
+            on=['namespace', 'pod'],
             how='left'
         ).rename(columns={'owner_name': 'replicaset'})
 
@@ -876,14 +898,14 @@ class TracerKWOKOnly:
         # =========================
         usage_df = pd.merge(
             usage_df,
-            self.kube_replicaset_owner[['replicaset', 'owner_name']],
-            on='replicaset',
+            self.kube_replicaset_owner[['namespace', 'replicaset', 'owner_name']],
+            on=['namespace', 'replicaset'],
             how='left'
         )
 
         # substituir replicaset pelo deployment (owner)
         usage_df['replicaset'] = usage_df['owner_name'].combine_first(usage_df['replicaset'])
-
+        
         # remover coluna auxiliar
         usage_df = usage_df.drop(columns=['owner_name'])
 
@@ -896,6 +918,12 @@ class TracerKWOKOnly:
             .sum(min_count=1)
         )
 
+        valid_workloads = self.df_final[['namespace', 'replicaset']].drop_duplicates()
+        usage_df = usage_df.merge(valid_workloads, on=['namespace', 'replicaset'], how='inner')
+
+        # =========================
+        # FILL NAN VALUES
+        # =========================
         # ordenar antes de preencher
         usage_df = usage_df.sort_values(["namespace", "replicaset", "timestamp"])
 
@@ -905,8 +933,6 @@ class TracerKWOKOnly:
             .groupby(["namespace", "replicaset"])[["cpu_usage", "memory_usage"]]
             .bfill()
         )
-
-        usage_df = usage_df[usage_df['replicaset'].isin(self.df_final['replicaset'])]
 
         # =========================
         # CONVERT MEMORY TO GiB
