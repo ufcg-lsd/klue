@@ -22,14 +22,13 @@ class TracerKWOKOnly:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, sum_container_cpu_usage_seconds_total, sum_container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
+    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total, container_memory_usage_bytes, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
         self.kube_pod_container_resource_requests_path = kube_pod_container_resource_requests_path
         self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total
-        self.sum_container_cpu_usage_seconds_total_path = sum_container_cpu_usage_seconds_total
-        self.sum_container_memory_usage_bytes_path = sum_container_memory_usage_bytes
+        self.container_memory_usage_bytes = container_memory_usage_bytes
         self.kube_pod_owner_path = kube_pod_owner_path
         self.kube_pod_status_phase_path = kube_pod_status_phase
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
@@ -53,8 +52,7 @@ class TracerKWOKOnly:
         self.log("[INFO] Loading data from CSV files.")
         self.kube_pod_container_resource_requests = pd.read_csv(self.kube_pod_container_resource_requests_path)
         self.container_cpu_usage_seconds_total = pd.read_csv(self.container_cpu_usage_seconds_total_path)
-        self.sum_container_memory_usage_bytes = pd.read_csv(self.sum_container_memory_usage_bytes_path)
-        self.sum_container_cpu_usage_seconds_total = pd.read_csv(self.sum_container_cpu_usage_seconds_total_path)
+        self.container_memory_usage_bytes = pd.read_csv(self.container_memory_usage_bytes)
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
         self.kube_pod_status_phase = pd.read_csv(self.kube_pod_status_phase_path)
         self.kube_replicaset_owner = pd.read_csv(self.kube_replicaset_owner_path)
@@ -106,8 +104,7 @@ class TracerKWOKOnly:
         self.log("[INFO] Preprocessing dataframes.")
         self.kube_pod_container_resource_requests, \
         self.container_cpu_usage_seconds_total, \
-        self.sum_container_memory_usage_bytes, \
-        self.sum_container_cpu_usage_seconds_total, \
+        self.container_memory_usage_bytes, \
         self.kube_pod_owner, \
         self.kube_pod_status_phase, \
         self.kube_replicaset_owner, \
@@ -116,8 +113,7 @@ class TracerKWOKOnly:
         self.hpa_target_metric = self.normalize_timestamps([
             self.kube_pod_container_resource_requests,
             self.container_cpu_usage_seconds_total,
-            self.sum_container_memory_usage_bytes,
-            self.sum_container_cpu_usage_seconds_total,
+            self.container_memory_usage_bytes,
             self.kube_pod_owner,
             self.kube_pod_status_phase,
             self.kube_replicaset_owner,
@@ -133,13 +129,16 @@ class TracerKWOKOnly:
 
 
         Operations performed:
-        - On `self.container_cpu_usage_seconds_total`:
+        - On `self.container_cpu_usage_seconds_total`, to build self.pod_metadata:
             - Selects 'timestamp', 'node_kubernetes_io_instance_type',
               'kubernetes_io_hostname', and 'pod'.
             - Renames 'node_kubernetes_io_instance_type' to 'instance_type'.
             - Renames 'kubernetes_io_hostname' to 'node'.
-            - Removes duplicate rows based on 'pod' and 'timestamp', keeping
-              the first occurrence.
+            - Removes duplicate rows based on 'pod' and 'timestamp', keeping the first occurrence.
+        - On `self.container_cpu_usage_seconds_total`:
+            - Selects 'timestamp', 'namespace', 'pod', 'container', 'value'.
+        - On `self.container_memory_usage_bytes`:
+            - Selects 'timestamp', 'namespace', 'pod', 'container', 'value'.
         - On `self.kube_pod_container_resource_requests`:
             - Selects "timestamp", "pod", "namespace", "value", "resource",
               and "node".
@@ -163,15 +162,20 @@ class TracerKWOKOnly:
         """
 
         # Selecting only the desired final columns
-        self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total[['timestamp', 'node_kubernetes_io_instance_type', 'kubernetes_io_hostname', 'pod']]
-        self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total.rename(
-            columns={
+        self.pod_metadata = (
+            self.container_cpu_usage_seconds_total[
+                ['timestamp', 'node_kubernetes_io_instance_type', 'kubernetes_io_hostname', 'pod']
+            ]
+            .rename(columns={
                 'node_kubernetes_io_instance_type': 'instance_type',
                 'kubernetes_io_hostname': 'node'
-            }
+            })
+            .drop_duplicates(subset=['pod', 'timestamp'], keep='first')
         )
-        self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total.drop_duplicates(subset=['pod', 'timestamp'], keep='first')
 
+        self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total[['timestamp', 'namespace', 'pod', 'container', 'value']]
+        self.container_memory_usage_bytes = self.container_memory_usage_bytes[['timestamp', 'namespace', 'pod', 'container', 'value']]
+        
         self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]
 
         self.kube_pod_owner = self.kube_pod_owner.drop_duplicates(subset='pod', keep='first')
@@ -200,7 +204,7 @@ class TracerKWOKOnly:
         """
 
         self.karpenter_pods_state = pd.merge(
-            self.container_cpu_usage_seconds_total,
+            self.pod_metadata,
             self.kube_pod_status_phase,
             on=["timestamp", "pod"],
             how="left"
@@ -260,14 +264,10 @@ class TracerKWOKOnly:
         # Remove duplicate rows, keeping only unique ones
         df_merged = df_merged.drop_duplicates()
 
-        df_merged.to_csv("/tmp/df_merged_before_sum.csv")
-
         # Sum all occurrences of CPU and memory for each timestamp of a pod
         df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'instance_type', 'node', 'resource']).agg({
             'value': 'sum'
         }).reset_index()
-
-        df_merged.to_csv("/tmp/df_merged_after_sum.csv")
 
         # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory'
         df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'instance_type', 'node'],
@@ -322,8 +322,6 @@ class TracerKWOKOnly:
         df_merged['replicaset'] = df_merged['owner_name'].combine_first(df_merged['replicaset'])
 
         self.df_final = df_merged.drop(columns=['owner_kind_x', 'owner_kind_y'])
-
-        self.df_final.to_csv("/tmp/df_final_after_merge_replicaset_owner.csv")
 
     def remove_not_considered_resources_and_namespaces(self):
         """
@@ -463,8 +461,6 @@ class TracerKWOKOnly:
 
         hpa_metrics = hpa_metrics.sort_values(["namespace", "horizontalpodautoscaler", "timestamp"]).reset_index(drop=True)
 
-        hpa_metrics.to_csv("/tmp/hpa_metrics.csv")
-
         apply_action = hpa_metrics.copy()
         apply_action["action"] = "apply"
 
@@ -474,7 +470,6 @@ class TracerKWOKOnly:
 
         self.df_hpa_trace = pd.concat([apply_action, delete_rows], ignore_index=True, sort=False)
         self.df_hpa_trace = self.df_hpa_trace.sort_values(["timestamp", "namespace", "horizontalpodautoscaler", "action"]).reset_index(drop=True)
-        self.df_hpa_trace.to_csv("/tmp/hpa.csv")
 
     def process_and_save_pods_allocation(self):
         """
@@ -491,21 +486,12 @@ class TracerKWOKOnly:
         self.log("[INFO] Processing and saving pods allocation.")
         df_pods_allocation = self.df_final[self.df_final['timestamp'] == self.df_final['timestamp'].min()]
 
-        df_pods_allocation.to_csv("/tmp/df_pods_allocation_not_final.csv")
-
         df_pods_allocation = df_pods_allocation[~df_pods_allocation["node"].isin(["unallocated"]) & ~df_pods_allocation["instance_type"].isin(["unallocated"])]
 
         # Remove nodes that appear in only one timestamp in the whole trace
         node_timestamp_counts = self.df_final.groupby('node')['timestamp'].nunique()
         valid_nodes = node_timestamp_counts[node_timestamp_counts > 1].index
         df_pods_allocation = df_pods_allocation[df_pods_allocation['node'].isin(valid_nodes)]
-
-        self.df_pods_allocation_test = df_pods_allocation.groupby(
-            ['namespace', 'node', 'replicaset', 'owner_kind', 'instance_type']
-        ).agg(
-            pods_count=('replicaset', 'count'),
-            pods=('pod', lambda x: list(x))
-        ).reset_index()
         
         self.df_pods_allocation = df_pods_allocation.groupby(['namespace', 'node', 'replicaset', 'owner_kind', 'instance_type']).agg(
             pods_count=('replicaset', 'count'),
@@ -612,7 +598,6 @@ class TracerKWOKOnly:
                             memory_usage=('memory_usage', 'sum')
                         ).reset_index()
             group_hpa = self.df_hpa_trace[self.df_hpa_trace['timestamp'] == timestamp]
-
 
             # =========================
             # DEPLOYMENT EVENTS (scale/create/delete)
@@ -828,8 +813,6 @@ class TracerKWOKOnly:
         # preencher gaps após merge
         usage_df = usage_df.sort_values(['pod', 'timestamp'])
 
-        usage_df.to_csv("/tmp/derikiiii.csv", index=False)
-
         # =========================
         # ADD REPLICASET
         # =========================
@@ -877,8 +860,6 @@ class TracerKWOKOnly:
         # FINAL
         # =========================
         self.df_container_usage = usage_df
-
-        self.df_container_usage.to_csv("/tmp/df_container_usage.csv", index=False)
 
         self.log("[INFO] Container usage dataframe built.")
 
