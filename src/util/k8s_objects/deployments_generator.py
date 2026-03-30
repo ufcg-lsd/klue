@@ -76,17 +76,23 @@ class DeploymentsGenerator:
                                 "name": row['replicaset'],
                                 "image": "fake-image",
                                 "resources": {
-                                    "requests": {}
+                                    "requests": {},
+                                    "limits": {}
                                 },
                             }
                         ],
                     },
                 }
 
-                if row['cpu'] != 'NA':
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(row['cpu'])
-                if row['memory'] != 'NA':
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(row['memory'])
+                if pd.notna(row['cpu_request']):
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(row['cpu_request'])
+                if pd.notna(row['memory_request']):
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(row['memory_request'])
+
+                if pd.notna(row['cpu_limit']):
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["cpu"] = self.put_cpu_unity(row['cpu_limit'])
+                if pd.notna(row['memory_limit']):
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["memory"] = self.put_memory_unity(row['memory_limit'])
 
                 deployment = {
                     "apiVersion": "apps/v1",

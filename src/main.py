@@ -44,6 +44,7 @@ class Main:
         else:
             tracer = TracerKWOKOnly(
                 os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
+                os.path.join(self.trace_path, "kube_pod_container_resource_limits.csv"),
                 os.path.join(self.trace_path, "container_cpu_usage_seconds_total.csv"),
                 os.path.join(self.trace_path, "container_memory_usage_bytes.csv"),
                 os.path.join(self.trace_path, "kube_pod_owner.csv"),

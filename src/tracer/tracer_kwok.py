@@ -22,11 +22,12 @@ class TracerKWOKOnly:
     NodePools or Provisioners directly, as K8SObjectGenerator is called with karpenter=False).
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, container_cpu_usage_seconds_total_path, container_memory_usage_bytes_path, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
+    def __init__(self, kube_pod_container_resource_requests_path, kube_pod_container_resource_limits_path, container_cpu_usage_seconds_total_path, container_memory_usage_bytes_path, kube_pod_owner_path, kube_pod_status_phase, kube_replicaset_owner_path, instance_types_path, hpa_spec_max_replicas_path, hpa_spec_min_replicas_path, hpa_target_metric_path):
         """
         Initializes the Tracer class with the paths to various Kubernetes-related data files.
         """
         self.kube_pod_container_resource_requests_path = kube_pod_container_resource_requests_path
+        self.kube_pod_container_resource_limits_path = kube_pod_container_resource_limits_path
         self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total_path
         self.container_memory_usage_bytes_path = container_memory_usage_bytes_path
         self.kube_pod_owner_path = kube_pod_owner_path
@@ -51,6 +52,7 @@ class TracerKWOKOnly:
         """
         self.log("[INFO] Loading data from CSV files.")
         self.kube_pod_container_resource_requests = pd.read_csv(self.kube_pod_container_resource_requests_path)
+        self.kube_pod_container_resource_limits = pd.read_csv(self.kube_pod_container_resource_limits_path)
         self.container_cpu_usage_seconds_total = pd.read_csv(self.container_cpu_usage_seconds_total_path)
         self.container_memory_usage_bytes = pd.read_csv(self.container_memory_usage_bytes_path)
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
@@ -103,6 +105,7 @@ class TracerKWOKOnly:
         """
         self.log("[INFO] Preprocessing dataframes.")
         self.kube_pod_container_resource_requests, \
+        self.kube_pod_container_resource_limits, \
         self.container_cpu_usage_seconds_total, \
         self.container_memory_usage_bytes, \
         self.kube_pod_owner, \
@@ -112,6 +115,7 @@ class TracerKWOKOnly:
         self.hpa_spec_min_replicas, \
         self.hpa_target_metric = self.normalize_timestamps([
             self.kube_pod_container_resource_requests,
+            self.kube_pod_container_resource_limits,
             self.container_cpu_usage_seconds_total,
             self.container_memory_usage_bytes,
             self.kube_pod_owner,
@@ -140,6 +144,8 @@ class TracerKWOKOnly:
         - On `self.container_memory_usage_bytes`:
             - Selects 'timestamp', 'namespace', 'pod', 'container', and 'value'.
         - On `self.kube_pod_container_resource_requests`:
+            - Selects 'timestamp', 'pod', 'namespace', 'value', 'resource', and 'node'.
+        - On `self.kube_pod_container_resource_limits`:
             - Selects 'timestamp', 'pod', 'namespace', 'value', 'resource', and 'node'.
         - On `self.kube_pod_owner`:
             - Selects 'namespace', 'pod', 'owner_name', and 'owner_kind'.
@@ -174,8 +180,9 @@ class TracerKWOKOnly:
 
         self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total[['timestamp', 'namespace', 'pod', 'container', 'value']]
         self.container_memory_usage_bytes = self.container_memory_usage_bytes[['timestamp', 'namespace', 'pod', 'container', 'value']]
-        
-        self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]
+
+        self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]        
+        self.kube_pod_container_resource_limits = self.kube_pod_container_resource_limits[["timestamp", "pod", "namespace", "value", "resource", "node"]]
 
         self.kube_pod_owner = (
             self.kube_pod_owner[
@@ -222,12 +229,13 @@ class TracerKWOKOnly:
         """
         Merges pod state data with resource request data, processes the
         combined data, and generates a final DataFrame with aggregated and
-        pivoted resource information (CPU and memory).
+        pivoted resource information (CPU and memory requests and limits).
 
         Steps:
         1. Merges `self.kube_pod_container_resource_requests` (source of resource
-        requests) with `self.karpenter_pods_state` (source of pod state,
-        node, instance type, and phase) using ('timestamp', 'namespace', 'pod')
+        requests) and `self.kube_pod_container_resource_limits` (source of resource
+        limits) with `self.karpenter_pods_state` (source of pod state, node, 
+        instance type, and phase) using ('timestamp', 'namespace', 'pod')
         as keys (left join). Suffixes are used to distinguish columns from
         the original DataFrames if names clash (for example, 'node').
         2. Populates the output 'node' column using values from
@@ -239,26 +247,33 @@ class TracerKWOKOnly:
         to propagate nearby values for selected columns.
         5. Removes duplicate rows.
         6. Sums resource 'value's for each unique combination of
-        'timestamp', 'pod', 'namespace', 'instance_type', 'node', and 'resource'.
+        'timestamp', 'pod', 'namespace', 'instance_type', 'node', 'resource_kind',
+        and 'resource'.
         7. Pivots the DataFrame to transform resource types (for example, 'cpu'
-        and 'memory') into separate columns.
-        8. Fills missing CPU and memory columns with 'NA' placeholders.
-        9. Filters out rows where either the 'cpu' or 'memory' column still has
-        the 'NA' placeholder.
+        and 'memory') into separate columns for requests and limits.
+        8. Fills missing request and limit CPU and memory columns with 'NaN' values.
+        9. Filters out rows where either the 'cpu_request' or 'memory_request'
+        column still has the 'NaN' value.
         10. Stores the processed DataFrame in `self.df_final`.
         11. Logs the count of unique pods remaining in `self.df_final`.
         """
         # Direct merge using 'timestamp', 'namespace' and 'pod' as keys
         df_merged = pd.merge(
-            self.kube_pod_container_resource_requests,
+            pd.concat(
+                [
+                    self.kube_pod_container_resource_requests.assign(resource_kind="request"),
+                    self.kube_pod_container_resource_limits.assign(resource_kind="limit"),
+                ],
+                ignore_index=True
+            ),
             self.karpenter_pods_state,
             on=["timestamp", "namespace", "pod"],
             how="left",
-            suffixes=('_resource_requests', '_karpenter_state')
+            suffixes=("_resource", "_karpenter_state")
         ).assign(
             node=lambda df: df["node_karpenter_state"]
         ).drop(
-            columns=["node_resource_requests", "node_karpenter_state"]
+            columns=["node_resource", "node_karpenter_state"]
         )
 
         df_merged["node"] = df_merged["node"].fillna("unallocated")
@@ -268,7 +283,7 @@ class TracerKWOKOnly:
         # Filling the dataframe with the closest occurrence of this pod where there are NA values
         df_merged = df_merged.sort_values(["namespace", "pod", "timestamp"])
 
-        cols_to_fill = ["resource", "value", "node", "instance_type", "phase"]
+        cols_to_fill = ["resource_kind", "resource", "value", "node", "instance_type", "phase"]
         df_merged[cols_to_fill] = (
             df_merged.groupby(["namespace", "pod"])[cols_to_fill]
             .ffill()
@@ -279,21 +294,29 @@ class TracerKWOKOnly:
         df_merged = df_merged.drop_duplicates()
 
         # Sum all occurrences of CPU and memory for each timestamp of a pod
-        df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'instance_type', 'node', 'resource']).agg({
-            'value': 'sum'
-        }).reset_index()
+        df_merged = df_merged.groupby(
+            ["timestamp", "pod", "namespace", "instance_type", "node", "resource_kind", "resource"],
+            as_index=False
+        ).agg({
+            "value": "sum"
+        })
 
-        # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory'
-        df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'instance_type', 'node'],
-                            columns='resource',
-                            values='value').reset_index()
+        # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory' for requests and limits
+        df_merged["metric"] = df_merged["resource"] + "_" + df_merged["resource_kind"]
+        df_pivoted = df_merged.pivot(
+            index=["timestamp", "pod", "namespace", "instance_type", "node"],
+            columns="metric",
+            values="value"
+        ).reset_index()
 
-        # Fill missing values with 'NA' for CPU and memory
-        df_pivoted['cpu'] = df_pivoted['cpu'].fillna('NA')
-        df_pivoted['memory'] = df_pivoted['memory'].fillna('NA')
+        # Fill missing values with NaN for CPU and memory
+        for col in ["cpu_request", "memory_request", "cpu_limit", "memory_limit"]:
+            if col not in df_pivoted.columns:
+                df_pivoted[col] = float("nan")
+            else:
+                df_pivoted[col] = pd.to_numeric(df_pivoted[col], errors="coerce")
 
-        self.df_final = df_pivoted[~((df_pivoted['cpu'] == 'NA') | (df_pivoted['memory'] == 'NA'))]
-
+        self.df_final = df_pivoted[df_pivoted["cpu_request"].notna() & df_pivoted["memory_request"].notna()]
         # Total count of unique pods created and removed
         total_pods = self.df_final['pod'].nunique()
         self.log(f"[INFO] Number of pods after remove NAs and pods that finish on first timestamp: {total_pods}")
@@ -521,16 +544,19 @@ class TracerKWOKOnly:
         """
         Processes and saves the final trace data by aggregating and transforming the dataframe.
         The resulting CSV file contains the final trace data with the following columns:
-        - 'timestamp', 'namespace', 'replicaset', 'owner_kind', 'pods', 'cpu', 'memory', and 'action'.
+        - 'timestamp', 'namespace', 'replicaset', 'owner_kind', 'pods',
+        'cpu_request', 'memory_request', 'cpu_limit', 'memory_limit', and 'action'.
         """
         self.log("[INFO] Processing and saving final trace.")
         df_adjusted = self.df_final.groupby(['timestamp', 'namespace', 'replicaset', 'owner_kind']).agg(
             pods_count=('replicaset', 'count'),
-            cpu_count=('cpu', 'mean'),
-            memory_count=('memory', 'mean')
+            cpu_request=('cpu_request', 'mean'),
+            memory_request=('memory_request', 'mean'),
+            cpu_limit=('cpu_limit', 'mean'),
+            memory_limit=('memory_limit', 'mean')
         ).reset_index()
 
-        df_adjusted = df_adjusted.rename(columns={'pods_count': 'pods', 'cpu_count': 'cpu', 'memory_count': 'memory'})
+        df_adjusted = df_adjusted.rename(columns={'pods_count': 'pods'})
 
         # This step is to add the action related to the replicaset
         df_adjusted['action'] = 'scale'
