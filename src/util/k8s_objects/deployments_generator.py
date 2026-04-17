@@ -65,9 +65,12 @@ class DeploymentsGenerator:
                     "deployment": row['replicaset']
                 }
 
+                node_selector = {"kwok.x-k8s.io/node": "true"}
+                
                 pod_template = {
                     "metadata": {"labels": labels},
                     "spec": {
+                        "nodeSelector": node_selector,
                         "schedulerName": "custom-scheduler",
                         "affinity": affinity,
                         "tolerations": tolerations,
