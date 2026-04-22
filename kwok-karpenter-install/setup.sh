@@ -91,7 +91,4 @@ echo "👉 Open: http://${MINIKUBE_IP}:32000"
 # VPA configuration
 # -----------------------------
 
-cd autoscaler/vertical-pod-autoscaler
-./hack/vpa-up.sh
-
-cd ../../
+./setup-vpa.sh # to use vpa, you need to apply an .yaml manifest with VPA configuration, e.g. vpa.yaml
