@@ -50,3 +50,5 @@ echo ""
 echo "▶ To verify, run:"
 echo "   kubectl port-forward svc/prometheus-k8s -n monitoring 9090:9090"
 echo "   curl -s 'http://localhost:9090/api/v1/query?query=kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target' | jq '.data.result'"
+
+# to use vpa, you need to apply an .yaml manifest with VPA configuration, e.g. vpa.yaml

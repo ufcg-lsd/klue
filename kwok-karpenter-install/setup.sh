@@ -91,4 +91,23 @@ echo "👉 Open: http://${MINIKUBE_IP}:32000"
 # VPA configuration
 # -----------------------------
 
+chmod +x setup-vpa.sh
+
 ./setup-vpa.sh # to use vpa, you need to apply an .yaml manifest with VPA configuration, e.g. vpa.yaml
+
+echo "▶ Creating VPA for coredns (to trigger recommendations)"
+cat <<EOF | kubectl apply -f -
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-coredns
+  namespace: kube-system
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: coredns
+  updatePolicy:
+    updateMode: "Off"
+EOF
+echo "✅ VPA created"
