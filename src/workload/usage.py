@@ -1,44 +1,53 @@
 import multiprocessing
 import queue
+
 from kubernetes.client.rest import ApiException
 
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_objects.cluster_resource_usage_generator import ClusterResourceUsageGenerator
+from workload.usage_assignment import UsageAssignmentEngine
 
 
 class UsageManager(multiprocessing.Process):
     """
-    Background process responsible for managing ClusterResourceUsage (CRU)
-    objects used by KWOK to simulate resource usage.
+    Background process responsible for managing KWOK ClusterResourceUsage objects.
 
-    This manager receives usage events through a queue and updates CRU objects
-    accordingly. It also periodically reconciles deployments to detect changes
-    in replica count and adjusts per-container resource usage.
+    - Receives set-usage events with real pod-level usage snapshots.
+    - Tracks workloads by (namespace, name).
+    - Periodically checks the exact set of emulated pods for each tracked workload.
+    - Reconciles when:
+        1. a new set-usage event arrives; or
+        2. the emulated pod set changes.
+    - Delegates usage distribution to UsageAssignmentEngine.
+    - Applies the returned assignment as one ClusterResourceUsage per emulated pod.
     """
 
     TIME_OUT = 200
+    RECONCILE_INTERVAL_SECONDS = 5
+
     CRU_GROUP = "kwok.x-k8s.io"
     CRU_VERSION = "v1alpha1"
     CRU_PLURAL = "clusterresourceusages"
 
     def __init__(self, queue):
-        """
-        Initialize the UsageManager process.
-
-        Args:
-            queue: multiprocessing queue used to receive usage events.
-        """
         super().__init__()
         self.queue = queue
 
-        # Maps container → index inside CRU.spec.usages
-        self.container_usage_map = {}
+        # (namespace, workload_name) -> {
+        #   (namespace, real_pod_name): {"cpu": float, "memory": float}
+        # }
+        self.last_usage_actions = {}
 
-        # Stores deployments currently tracked for reconciliation
-        self.deployments = {}
+        # (namespace, workload_name) -> {(namespace, emulated_pod_name), ...}
+        self.last_emulated_pods = {}
+
+        # (namespace, workload_name) -> set(cru_name)
+        self.managed_crus_by_workload = {}
+
+        # set(cru_name)
+        self.existing_crus = set()
 
     def log(self, message):
-        """Print formatted log messages for the UsageManager."""
         print(f"[USAGE MANAGER] {message}", flush=True)
 
     def run(self):
@@ -47,20 +56,20 @@ class UsageManager(multiprocessing.Process):
 
         Waits for events from the queue. When no events arrive within
         the timeout window, a reconciliation loop runs to ensure CRU
-        objects remain consistent with the current replica counts.
+        objects remain consistent with the current emulated pods set.
         """
 
         self.log("Process started")
 
         self.k8s_api = K8SAPI(timeout=self.TIME_OUT)
+        self.assignment_engine = UsageAssignmentEngine()
         self.cru_generator = ClusterResourceUsageGenerator()
 
         self.log("K8SAPI initialized")
 
         while True:
-
             try:
-                event = self.queue.get(timeout=5)
+                event = self.queue.get(timeout=self.RECONCILE_INTERVAL_SECONDS)
 
                 self.log(f"Event received: {event}")
 
@@ -68,349 +77,241 @@ class UsageManager(multiprocessing.Process):
                     self.log("Stopping UsageManager")
                     break
 
-                self.apply_usage(event)
+                self.handle_set_usage_event(event)
 
             except queue.Empty:
-                # No event received → perform periodic reconciliation
-                self.reconcile_deployments()
+                # No event received -> perform periodic reconciliation
+                self.reconcile_tracked_workloads()
 
     # --------------------------------------------------
-    # Kubernetes helpers
+    # Event handling
     # --------------------------------------------------
 
-    def get_current_replicas(self, namespace, name):
+    def handle_set_usage_event(self, event):
         """
-        Fetch the number of ready replicas for a Deployment.
-
-        Args:
-            namespace: Deployment namespace
-            name: Deployment name
-
-        Returns:
-            int: number of ready replicas (defaults to 1 if unavailable)
+        Store the latest set-usage event for a workload and reconcile that workload.
         """
 
-        try:
-            deployment = self.k8s_api.read_namespaced_deployment(name, namespace)
-
-            replicas = deployment.status.ready_replicas
-            if replicas is None:
-                replicas = 1
-
-            return replicas
-
-        except Exception as e:
-            # Fallback behavior if the Deployment cannot be read
-            self.log(f"[WARNING] Failed to fetch replicas for {name}: {e}")
-            return 1
-
-    # --------------------------------------------------
-    # Event processing
-    # --------------------------------------------------
-
-    def apply_usage(self, event):
-        """
-        Process a usage event and update the corresponding CRU.
-
-        The event describes resource consumption for a container inside a
-        deployment. The manager calculates per-replica resource usage and
-        updates or inserts entries in the CRU object.
-
-        Args:
-            event: dict containing usage data
-        """
-
-        name = event["name"]
         namespace = event["namespace"]
-        container = event["container"]
+        name = event["name"]
+        workload_key = (namespace, name)
 
-        base_cpu = event["cpu"]
-        base_memory = event["memory"]
-
-        cru_name = f"{namespace}-{name}"
-
-        self.log(f"Applying usage -> CRU: {cru_name}, container: {container}")
-
-        # Track deployment usage information
-        deployment_key = cru_name
-
-        if deployment_key not in self.deployments:
-            self.deployments[deployment_key] = {
-                "namespace": namespace,
-                "name": name,
-                "replicas": None,
-                "containers": {}
+        usage_action = {}
+        for pod_name, usage in event.get("pods").items():
+            usage_action[(namespace, pod_name)] = {
+                "cpu": usage.get("cpu", 0),
+                "memory": usage.get("memory", 0)
             }
 
-        self.deployments[deployment_key]["containers"][container] = {
-            "base_cpu": base_cpu,
-            "base_memory": base_memory
-        }
+        self.last_usage_actions[workload_key] = usage_action
 
-        replicas = self.get_current_replicas(namespace, name)
-        self.deployments[deployment_key]["replicas"] = replicas
-
-        # Compute per-container usage
-        cpu_per_container = round(base_cpu / replicas, 4)
-        cpu = str(cpu_per_container)
-
-        memory_mi = (base_memory * 1024) / replicas
-        memory_per_container = int(memory_mi)
-
-        memory = f'Quantity("{memory_per_container}Mi")'
-
-        usage_obj = {
-            "containers": [container],
-            "usage": {
-                "cpu": {"expression": cpu},
-                "memory": {"expression": memory}
-            }
-        }
-
-        # Ensure CRU exists
-        if cru_name not in self.container_usage_map:
-            self.initialize_cru(cru_name, namespace, name, container, cpu, memory)
-
-        container_map = self.container_usage_map[cru_name]
-
-        # Update existing container usage or insert a new one
-        if container in container_map:
-            self.update_container_usage(cru_name, container_map[container], cpu, memory)
-        else:
-            self.insert_container_usage(cru_name, usage_obj, container)
+        self.reconcile_workload(
+            workload_key=workload_key
+        )
 
     # --------------------------------------------------
-    # CRU initialization
+    # Reconciliation
     # --------------------------------------------------
 
-    def initialize_cru(self, cru_name, namespace, replicaset, container, cpu, memory):
+    def reconcile_tracked_workloads(self):
         """
-        Ensure a CRU exists for the given deployment.
-
-        If the CRU already exists, the container index mapping is loaded.
-        Otherwise, a new CRU object is created.
-
-        Args:
-            cru_name: name of the CRU
-            namespace: deployment namespace
-            replicaset: deployment name
-            container: container name
-            cpu: CPU usage expression
-            memory: memory usage expression
+        Periodically check whether the exact emulated pod set changed.
         """
 
-        self.log(f"Initializing CRU {cru_name}")
+        for workload_key in list(self.last_usage_actions.keys()):
+            namespace, name = workload_key
 
-        try:
+            try:
+                emulated_pods = self.list_emulated_pods(namespace, name)
+            except ApiException as e:
+                if e.status == 404:
+                    self.log(f"[INFO] Workload disappeared: {namespace}/{name}")
+                    self.cleanup_workload(workload_key)
+                    continue
+                else:
+                    self.log(f"[WARNING] Couldn't list deployment {namespace}/{name} pods. Skipping reconcile.")
+                    continue
 
-            cru = self.k8s_api.get_cluster_custom_object(
+            previous_pods = self.last_emulated_pods.get(workload_key)
+            if previous_pods == emulated_pods:
+                continue
+
+            self.log(f"[INFO] Emulated pod set changed for {namespace}/{name}. Starting reconciliation.")
+
+            self.reconcile_workload(
+                workload_key=workload_key,
+                emulated_pods=emulated_pods,
+            )
+
+    def reconcile_workload(self, workload_key, emulated_pods=None):
+        """
+        Reconcile one workload by asking UsageAssignmentEngine for the final
+        pod-level assignment and applying it to the cluster.
+        """
+
+        namespace, name = workload_key
+
+        last_usage_action = self.last_usage_actions.get(workload_key)
+
+        if emulated_pods is None:
+            try:
+                emulated_pods = self.list_emulated_pods(namespace, name)
+            except ApiException as e:
+                if e.status == 404:
+                    self.log(f"[INFO] Workload disappeared: {namespace}/{name}")
+                    self.cleanup_workload(workload_key)
+                    return
+                else:
+                    self.log(f"[WARNING] Couldn't list deployment {namespace}/{name} pods. Skipping reconcile.")
+                    return
+
+        self.last_emulated_pods[workload_key] = emulated_pods
+
+        self.log(
+            f"[INFO] Reconciling {namespace}/{name}. "
+            f"Real pods: {len(last_usage_action)}. "
+            f"Emulated pods: {len(emulated_pods)}."
+        )
+
+        assignment = self.assignment_engine.resolve(
+            workload_key=workload_key,
+            real_pods_usage=last_usage_action,
+            emulated_pods=emulated_pods,
+        )
+
+        self.apply_assignment(workload_key, assignment)
+
+    # --------------------------------------------------
+    # Kubernetes pod discovery
+    # --------------------------------------------------
+    def list_emulated_pods(self, namespace, workload_name):
+        """
+        Return the exact set of live emulated pods for a workload.
+        """
+
+        pods = self.k8s_api.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=f"deployment={workload_name}",
+        )
+
+        result = set()
+        for pod in pods.items:
+            pod_name = pod.metadata.name
+
+            if pod.metadata.deletion_timestamp is not None:
+                continue
+
+            phase = pod.status.phase
+            if phase in {"Succeeded", "Failed"}:
+                continue
+
+            result.add((namespace, pod_name))
+
+        return result
+
+    # --------------------------------------------------
+    # Apply assignment
+    # --------------------------------------------------
+
+    def apply_assignment(self, workload_key, assignment):
+        """
+        Apply usage assignment to KWOK.
+        """
+
+        namespace, workload_name = workload_key
+
+        desired_crus = set()
+
+        for pod_key, usage in assignment.items():
+            pod_namespace, pod_name = pod_key
+
+            cpu = str(usage.get("cpu"))
+            memory = f'Quantity("{usage.get("memory")}Gi")' 
+            cru_name = f"usage-{pod_namespace}-{pod_name}"
+            
+            desired_crus.add(cru_name)
+
+            body = self.cru_generator.generate_cluster_resource_usage(
+                cru_name=cru_name,
+                namespace=pod_namespace,
+                pod_name=pod_name,
+                container=workload_name,
+                cpu=cpu,
+                memory=memory,
+            )
+
+            self.apply_cru(cru_name, body)
+
+            self.log(
+                f"[INFO] Applied usage for {pod_namespace}/{pod_name}: "
+                f"cpu={cpu}, memory={memory}"
+            )
+
+        self.delete_stale_crus(workload_key, desired_crus)
+        self.managed_crus_by_workload[workload_key] = desired_crus
+
+    def apply_cru(self, cru_name, body):
+        """
+        Create or patch a ClusterResourceUsage object.
+        """
+
+        if cru_name in self.existing_crus:
+            self.k8s_api.patch_cluster_custom_object(
                 group=self.CRU_GROUP,
                 version=self.CRU_VERSION,
                 plural=self.CRU_PLURAL,
-                name=cru_name
+                name=cru_name,
+                body=body,
             )
-
-            usages = cru["spec"].get("usages", [])
-            container_map = {}
-
-            # Build container → index mapping
-            for i, usage in enumerate(usages):
-                for c in usage["containers"]:
-                    container_map[c] = i
-
-            self.container_usage_map[cru_name] = container_map
-
+        else:
+            self.k8s_api.create_infrastructure_object(
+                body=body,
+                group=self.CRU_GROUP,
+                version=self.CRU_VERSION,
+                plural=self.CRU_PLURAL,
+            )
+            self.existing_crus.add(cru_name)
+    
+    def delete_cru(self, cru_name):
+        """
+        Delete a ClusterResourceUsage object.
+        """
+        
+        try:
+            self.k8s_api.delete_cluster_custom_object(
+                group=self.CRU_GROUP,
+                version=self.CRU_VERSION,
+                plural=self.CRU_PLURAL,
+                name=cru_name,
+            )
+            self.log(f"[INFO] Deleted CRU {cru_name}")
+                     
         except ApiException as e:
+            if e.status != 404:
+                self.log(f"[WARNING] Failed to delete CRU {cru_name}: {e}") 
+                return
+        
+        self.existing_crus.discard(cru_name)
 
-            if e.status == 404:
-
-                body = self.cru_generator.generate_cluster_resource_usage(
-                    namespace,
-                    replicaset,
-                    container,
-                    cpu,
-                    memory
-                )
-
-                self.k8s_api.create_infrastructure_object(
-                    body=body,
-                    group=self.CRU_GROUP,
-                    version=self.CRU_VERSION,
-                    plural=self.CRU_PLURAL
-                )
-
-                self.container_usage_map[cru_name] = {container: 0}
-
-                self.log(f"[INFO] Created CRU {cru_name}")
-
-            else:
-                raise
-
-    # --------------------------------------------------
-    # Insert usage
-    # --------------------------------------------------
-
-    def insert_container_usage(self, cru_name, usage_obj, container):
+    def delete_stale_crus(self, workload_key, desired_crus):
         """
-        Insert a new container usage entry into the CRU.
-
-        Args:
-            cru_name: CRU name
-            usage_obj: usage specification
-            container: container name
+        Delete CRUs previously managed for this workload that are no longer
+        needed after a pod-set change.
         """
 
-        self.log(f"Inserting container usage into {cru_name}")
+        previous_crus = self.managed_crus_by_workload.get(workload_key, set())
+        stale_crus = previous_crus - desired_crus
 
-        cru = self.k8s_api.get_cluster_custom_object(
-            group=self.CRU_GROUP,
-            version=self.CRU_VERSION,
-            plural=self.CRU_PLURAL,
-            name=cru_name
-        )
+        for cru_name in stale_crus:
+            self.delete_cru(cru_name)
 
-        usages = cru["spec"].get("usages", [])
-
-        usages.append(usage_obj)
-
-        body = {
-            "spec": {
-                "usages": usages
-            }
-        }
-
-        self.k8s_api.patch_cluster_custom_object(
-            group=self.CRU_GROUP,
-            version=self.CRU_VERSION,
-            plural=self.CRU_PLURAL,
-            name=cru_name,
-            body=body
-        )
-
-        index = len(self.container_usage_map[cru_name])
-        self.container_usage_map[cru_name][container] = index
-
-        self.log(f"[INFO] Inserted usage for {container} in {cru_name}")
-
-    # --------------------------------------------------
-    # Update usage
-    # --------------------------------------------------
-
-    def update_container_usage(self, cru_name, index, cpu, memory):
+    def cleanup_workload(self, workload_key):
         """
-        Update resource usage for an existing container entry in the CRU.
-
-        Args:
-            cru_name: CRU name
-            index: index inside spec.usages
-            cpu: updated CPU expression
-            memory: updated memory expression
+        Remove all local state and CRUs for a workload.
         """
+        for cru_name in self.managed_crus_by_workload.get(workload_key, set()):
+            self.delete_cru(cru_name)
 
-        self.log(f"Updating usage index {index} in {cru_name}")
-
-        cru = self.k8s_api.get_cluster_custom_object(
-            group=self.CRU_GROUP,
-            version=self.CRU_VERSION,
-            plural=self.CRU_PLURAL,
-            name=cru_name
-        )
-
-        usages = cru["spec"].get("usages", [])
-
-        container = usages[index]["containers"][0]
-
-        usages[index] = {
-            "containers": [container],
-            "usage": {
-                "cpu": {"expression": cpu},
-                "memory": {"expression": memory}
-            }
-        }
-
-        body = {
-            "spec": {
-                "usages": usages
-            }
-        }
-
-        self.k8s_api.patch_cluster_custom_object(
-            group=self.CRU_GROUP,
-            version=self.CRU_VERSION,
-            plural=self.CRU_PLURAL,
-            name=cru_name,
-            body=body
-        )
-
-        self.log(f"[INFO] Updated usage for {container}")
-
-    # --------------------------------------------------
-    # Reconciliation loop
-    # --------------------------------------------------
-
-    def reconcile_deployments(self):
-        """
-        Periodically reconcile deployments to detect replica changes.
-
-        If the number of replicas changes, per-container usage is recalculated
-        and the CRU object is updated accordingly.
-
-        If a deployment no longer exists, it is removed from the manager state.
-        """
-
-        removed = []
-
-        for cru_name, data in self.deployments.items():
-
-            namespace = data["namespace"]
-            name = data["name"]
-
-            try:
-                deployment = self.k8s_api.read_namespaced_deployment(name, namespace)
-
-                current_replicas = deployment.status.ready_replicas
-                if current_replicas is None:
-                    current_replicas = 1
-
-            except ApiException as e:
-
-                if e.status == 404:
-                    self.log(f"[INFO] Deployment {name} removed")
-                    removed.append(cru_name)
-                    continue
-                else:
-                    raise
-
-            if current_replicas == data["replicas"]:
-                continue
-
-            self.log(
-                f"[INFO] Replica change detected for {name}: "
-                f"{data['replicas']} -> {current_replicas}"
-            )
-
-            data["replicas"] = current_replicas
-
-            for container, usage in data["containers"].items():
-
-                cpu_per_container = round(usage["base_cpu"] / current_replicas, 4)
-                total_cpu = str(cpu_per_container)
-
-                memory_mi = (usage["base_memory"] * 1024) / current_replicas
-                memory_per_container = int(memory_mi)
-
-                total_memory = f'Quantity("{memory_per_container}Mi")'
-
-                index = self.container_usage_map[cru_name][container]
-
-                self.update_container_usage(
-                    cru_name,
-                    index,
-                    total_cpu,
-                    total_memory
-                )
-
-        # Remove deployments that no longer exist
-        for cru_name in removed:
-            del self.deployments[cru_name]
-            self.container_usage_map.pop(cru_name, None)
+        self.last_usage_actions.pop(workload_key, None)
+        self.last_emulated_pods.pop(workload_key, None)
+        self.managed_crus_by_workload.pop(workload_key, None)
