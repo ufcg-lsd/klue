@@ -121,16 +121,10 @@ class UsageManager(multiprocessing.Process):
         for workload_key in list(self.last_usage_actions.keys()):
             namespace, name = workload_key
 
-            try:
-                emulated_pods = self.list_emulated_pods(namespace, name)
-            except ApiException as e:
-                if e.status == 404:
-                    self.log(f"[INFO] Workload disappeared: {namespace}/{name}")
-                    self.cleanup_workload(workload_key)
-                    continue
-                else:
-                    self.log(f"[WARNING] Couldn't list deployment {namespace}/{name} pods. Skipping reconcile.")
-                    continue
+            emulated_pods = self.list_emulated_pods(namespace, name)
+            if not emulated_pods and not self.deployment_exists(namespace, name):
+                self.cleanup_workload(workload_key)
+                continue
 
             previous_pods = self.last_emulated_pods.get(workload_key)
             if previous_pods == emulated_pods:
@@ -154,16 +148,10 @@ class UsageManager(multiprocessing.Process):
         last_usage_action = self.last_usage_actions.get(workload_key)
 
         if emulated_pods is None:
-            try:
-                emulated_pods = self.list_emulated_pods(namespace, name)
-            except ApiException as e:
-                if e.status == 404:
-                    self.log(f"[INFO] Workload disappeared: {namespace}/{name}")
-                    self.cleanup_workload(workload_key)
-                    return
-                else:
-                    self.log(f"[WARNING] Couldn't list deployment {namespace}/{name} pods. Skipping reconcile.")
-                    return
+            emulated_pods = self.list_emulated_pods(namespace, name)
+            if not emulated_pods and not self.deployment_exists(namespace, name):
+                self.cleanup_workload(workload_key)
+                return
 
         self.last_emulated_pods[workload_key] = emulated_pods
 
@@ -305,9 +293,23 @@ class UsageManager(multiprocessing.Process):
         for cru_name in stale_crus:
             self.delete_cru(cru_name)
 
+
+    def deployment_exists(self, namespace, name):
+        try:
+            self.k8s_api.read_namespaced_deployment(
+                namespace=namespace,
+                name=name,
+            )
+            return True
+
+        except ApiException as e:
+            if e.status == 404:
+                return False
+            raise
+
     def cleanup_workload(self, workload_key):
         """
-        Remove all local state and CRUs for a workload.
+        Remove all related state and CRUs for a workload.
         """
         for cru_name in self.managed_crus_by_workload.get(workload_key, set()):
             self.delete_cru(cru_name)
@@ -315,3 +317,4 @@ class UsageManager(multiprocessing.Process):
         self.last_usage_actions.pop(workload_key, None)
         self.last_emulated_pods.pop(workload_key, None)
         self.managed_crus_by_workload.pop(workload_key, None)
+        self.assignment_engine.cleanup_workload(workload_key)

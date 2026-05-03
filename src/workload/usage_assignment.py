@@ -75,3 +75,6 @@ class UsageAssignmentEngine:
         state["last_assignment"] = assignment
 
         return assignment
+    
+    def cleanup_workload(self, workload_key):
+        self.state.pop(workload_key, None)
