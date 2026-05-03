@@ -5,59 +5,40 @@ class ClusterResourceUsageGenerator:
 
     def generate_cluster_resource_usage(
         self,
-        namespace: str,
-        replicaset: str,
-        container: str,
-        cpu: float,
-        memory: float
-    ) -> dict:
+        cru_name,
+        namespace,
+        pod_name,
+        container,
+        cpu,
+        memory,
+    ):
         """
-        Generates a ClusterResourceUsage definition.
-
-        Args:
-            namespace (str): Namespace of the workload
-            replicaset (str): ReplicaSet name
-            containers_usage (list): List with container usage definitions.
-
-            Example:
-            [
-                {
-                    "container": "sidecar",
-                    "cpu": "0.5",
-                    "memory": "Quantity(\"512Mi\")"
-                }
-            ]
-
-        Returns:
-            dict: ClusterResourceUsage object
+        Generate a ClusterResourceUsage scoped to exactly one pod.
         """
 
-        name = f"{namespace}-{replicaset}"
-
-        usages = []
-
-        usages.append({
-            "containers": [container],
-            "usage": {
-                "cpu": {
-                    "expression": cpu
-                },
-                "memory": {
-                    "expression": memory
-                }
-            }
-        })
-
-        cluster_resource_usage = {
+        return {
             "apiVersion": "kwok.x-k8s.io/v1alpha1",
             "kind": "ClusterResourceUsage",
             "metadata": {
-                "name": name
+                "name": cru_name,
             },
             "spec": {
-                "selector": {},
-                "usages": usages
-            }
+                "selector": {
+                    "matchNamespaces": [namespace],
+                    "matchNames": [pod_name],
+                },
+                "usages": [
+                    {
+                        "containers": [container],
+                        "usage": {
+                            "cpu": {
+                                "expression": cpu,
+                            },
+                            "memory": {
+                                "expression": memory,
+                            },
+                        },
+                    }
+                ],
+            },
         }
-
-        return cluster_resource_usage
