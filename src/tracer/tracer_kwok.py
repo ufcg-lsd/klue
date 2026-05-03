@@ -929,34 +929,21 @@ class TracerKWOKOnly:
             how='left'
         )
 
-        # substituir replicaset pelo deployment (owner)
-        usage_df['replicaset'] = usage_df['owner_name'].combine_first(usage_df['replicaset'])
-        
+        # name será o owner_name do replicaset. caso não haja owner_name, fallback para o próprio nome do replicaset.
+        usage_df["name"] = usage_df["owner_name"].combine_first(usage_df["replicaset"])
+
         # remover coluna auxiliar
         usage_df = usage_df.drop(columns=['owner_name'])
 
-        # =========================
-        # AGGREGATE BY REPLICASET
-        # =========================
-        usage_df = (
-            usage_df
-            .groupby(["timestamp", "namespace", "replicaset"], as_index=False)[["cpu_usage", "memory_usage"]]
-            .sum(min_count=1)
-        )
-
-        valid_workloads = self.df_final[['namespace', 'replicaset']].drop_duplicates()
-        usage_df = usage_df.merge(valid_workloads, on=['namespace', 'replicaset'], how='inner')
 
         # =========================
-        # FILL NAN VALUES
+        # FILL NAN VALUES AT POD GRANULARITY
         # =========================
-        # ordenar antes de preencher
-        usage_df = usage_df.sort_values(["namespace", "replicaset", "timestamp"])
+        usage_df = usage_df.sort_values(["namespace", "name", "pod", "timestamp"])
 
-        # preencher com valor do PRÓXIMO timestamp
         usage_df[["cpu_usage", "memory_usage"]] = (
             usage_df
-            .groupby(["namespace", "replicaset"])[["cpu_usage", "memory_usage"]]
+            .groupby(["namespace", "name", "pod"])[["cpu_usage", "memory_usage"]]
             .bfill()
         )
 
@@ -968,7 +955,9 @@ class TracerKWOKOnly:
         # =========================
         # FINAL
         # =========================
-        usage_df = usage_df.dropna(subset=["cpu_usage", "memory_usage"], how="all")
+        usage_df = usage_df.dropna(subset=["cpu_usage"], how="all")
+        usage_df = usage_df.dropna(subset=["memory_usage"], how="all")
+
         self.df_container_usage = usage_df
         self.log("[INFO] Workload usage dataframe built.")
 
