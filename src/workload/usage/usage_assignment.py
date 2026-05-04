@@ -79,7 +79,6 @@ class UsageAssignmentEngine:
             cpu_assignment = self.compression_heuristic_cpu.generate_assignment(
                 real_pods_usage=real_pods_usage,
                 emulated_pods_limit=emulated_pods_limit,
-                emulated_pods=emulated_pods,
                 mapping=new_mapping,
                 remaining_real_pods=remaining_real_pods,
                 resource="cpu",
@@ -88,7 +87,6 @@ class UsageAssignmentEngine:
             mem_assignment = self.compression_heuristic_mem.generate_assignment(
                 real_pods_usage=real_pods_usage,
                 emulated_pods_limit=emulated_pods_limit,
-                emulated_pods=emulated_pods,
                 mapping=new_mapping,
                 remaining_real_pods=remaining_real_pods,
                 resource="memory",
@@ -127,13 +125,11 @@ class UsageAssignmentEngine:
 
         return assignment
 
-    @staticmethod
-    def apply_mapping(mapping, real_pods_usage, resource, remaining_emulated_pods=None):
+    def apply_mapping(self, mapping, real_pods_usage, resource, remaining_emulated_pods=None):
         resource_assignment = {}
 
         for real_pod, emulated_pod in mapping.items():
             usage = real_pods_usage[real_pod][resource]
-
             resource_assignment[emulated_pod] = usage
         
         if remaining_emulated_pods:
