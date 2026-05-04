@@ -8,7 +8,7 @@ from kubernetes import client
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_object_applier import KubernetesObjectApplier
 import multiprocessing
-from klue.src.workload.usage.usage_manager import UsageManager
+from workload.usage.usage_manager import UsageManager
 
 class WorkloadManager:
     TIME_OUT = 200
