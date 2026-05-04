@@ -5,7 +5,7 @@ from kubernetes.client.rest import ApiException
 
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_objects.cluster_resource_usage_generator import ClusterResourceUsageGenerator
-from workload.usage_assignment import UsageAssignmentEngine
+from klue.src.workload.usage.usage_assignment import UsageAssignmentEngine
 
 
 class UsageManager(multiprocessing.Process):
