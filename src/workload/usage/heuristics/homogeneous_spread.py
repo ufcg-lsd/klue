@@ -43,7 +43,7 @@ class HomogeneousSpreadHeuristic:
         water_level = 0   # how much usage all pods should receive equally, taking in consideration some pods will be full
         non_full_pod_count = len(headroom_list)
         i = 0
-        while i < len(headroom_list) and rest > EPS:
+        while i < len(headroom_list) and rest > 0:
             _, current_headroom = headroom_list[i]
 
             if math.isinf(current_headroom):
@@ -54,6 +54,7 @@ class HomogeneousSpreadHeuristic:
 
             true_headroom = current_headroom - water_level
             if true_headroom <= EPS:
+                # considering floating point imprecision
                 non_full_pod_count -= 1
                 i += 1
                 continue
