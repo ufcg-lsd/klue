@@ -2,7 +2,7 @@ import multiprocessing
 import queue
 
 from kubernetes.client.rest import ApiException
-
+from kubernetes.utils.quantity import parse_quantity
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_objects.cluster_resource_usage_generator import ClusterResourceUsageGenerator
 from klue.src.workload.usage.usage_assignment import UsageAssignmentEngine
@@ -155,6 +155,8 @@ class UsageManager(multiprocessing.Process):
 
         self.last_emulated_pods[workload_key] = emulated_pods
 
+        real_pods_limit = self.get_pod_limits(emulated_pods)
+
         self.log(
             f"[INFO] Reconciling {namespace}/{name}. "
             f"Real pods: {len(last_usage_action)}. "
@@ -164,38 +166,11 @@ class UsageManager(multiprocessing.Process):
         assignment = self.assignment_engine.resolve(
             workload_key=workload_key,
             real_pods_usage=last_usage_action,
+            real_pods_limit=real_pods_limit,
             emulated_pods=emulated_pods,
         )
 
         self.apply_assignment(workload_key, assignment)
-
-    # --------------------------------------------------
-    # Kubernetes pod discovery
-    # --------------------------------------------------
-    def list_emulated_pods(self, namespace, workload_name):
-        """
-        Return the exact set of live emulated pods for a workload.
-        """
-
-        pods = self.k8s_api.list_namespaced_pod(
-            namespace=namespace,
-            label_selector=f"deployment={workload_name}",
-        )
-
-        result = set()
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-
-            if pod.metadata.deletion_timestamp is not None:
-                continue
-
-            phase = pod.status.phase
-            if phase in {"Succeeded", "Failed"}:
-                continue
-
-            result.add((namespace, pod_name))
-
-        return result
 
     # --------------------------------------------------
     # Apply assignment
@@ -237,6 +212,10 @@ class UsageManager(multiprocessing.Process):
 
         self.delete_stale_crus(workload_key, desired_crus)
         self.managed_crus_by_workload[workload_key] = desired_crus
+
+    # --------------------------------------------------
+    # K8s API calls
+    # --------------------------------------------------
 
     def apply_cru(self, cru_name, body):
         """
@@ -281,18 +260,30 @@ class UsageManager(multiprocessing.Process):
         
         self.existing_crus.discard(cru_name)
 
-    def delete_stale_crus(self, workload_key, desired_crus):
+    def list_emulated_pods(self, namespace, workload_name):
         """
-        Delete CRUs previously managed for this workload that are no longer
-        needed after a pod-set change.
+        Return the exact set of live emulated pods for a workload.
         """
 
-        previous_crus = self.managed_crus_by_workload.get(workload_key, set())
-        stale_crus = previous_crus - desired_crus
+        pods = self.k8s_api.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=f"deployment={workload_name}",
+        )
 
-        for cru_name in stale_crus:
-            self.delete_cru(cru_name)
+        result = set()
+        for pod in pods.items:
+            pod_name = pod.metadata.name
 
+            if pod.metadata.deletion_timestamp is not None:
+                continue
+
+            phase = pod.status.phase
+            if phase in {"Succeeded", "Failed"}:
+                continue
+
+            result.add((namespace, pod_name))
+
+        return result
 
     def deployment_exists(self, namespace, name):
         try:
@@ -306,6 +297,68 @@ class UsageManager(multiprocessing.Process):
             if e.status == 404:
                 return False
             raise
+    
+    # --------------------------------------------------
+    # List emulated pod's limits
+    # --------------------------------------------------
+
+    def get_pod_limits(self, pods):
+        """
+        Return current resource limits for the pods of a workload.
+        """
+
+        result = {}
+
+        for pod in pods.items:
+            namespace = pod.metadata.namespace
+            pod_name = pod.metadata.name
+
+            cpu_total = None
+            memory_total = None
+
+            for container in pod.spec.containers:
+                resources = container.resources
+                limits = resources.limits if resources.limits else {}
+
+                cpu_limit_base = limits.get("cpu")
+                memory_limit_base = limits.get("memory")
+
+                if cpu_limit_base is not None:
+                    cpu_limit = parse_quantity(str(cpu_limit_base))
+                    cpu_total = (cpu_total or 0) + cpu_limit
+
+                if memory_limit_base is not None:
+                    memory_limit = parse_quantity(str(memory_limit_base))
+                    memory_total = (memory_total or 0) + memory_limit
+
+            pod_limits = {}
+
+            if cpu_total is not None:
+                pod_limits["cpu"] = float(cpu_total)
+
+            if memory_total is not None:
+                pod_limits["memory"] = float(memory_total / 1024**3)
+
+            result[(namespace, pod_name)] = pod_limits
+
+        return result
+
+    # --------------------------------------------------
+    # Clean-up
+    # --------------------------------------------------
+
+    def delete_stale_crus(self, workload_key, desired_crus):
+        """
+        Delete CRUs previously managed for this workload that are no longer
+        needed after a pod-set change.
+        """
+
+        previous_crus = self.managed_crus_by_workload.get(workload_key, set())
+        stale_crus = previous_crus - desired_crus
+
+        for cru_name in stale_crus:
+            self.delete_cru(cru_name)
+
 
     def cleanup_workload(self, workload_key):
         """
