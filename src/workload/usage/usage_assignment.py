@@ -81,7 +81,7 @@ class UsageAssignmentEngine:
                 emulated_pods_limit=emulated_pods_limit,
                 emulated_pods=emulated_pods,
                 mapping=new_mapping,
-                remaining_pods=remaining_real_pods,
+                remaining_real_pods=remaining_real_pods,
                 resource="cpu",
             )
 
@@ -90,7 +90,7 @@ class UsageAssignmentEngine:
                 emulated_pods_limit=emulated_pods_limit,
                 emulated_pods=emulated_pods,
                 mapping=new_mapping,
-                remaining_pods=remaining_real_pods,
+                remaining_real_pods=remaining_real_pods,
                 resource="memory",
             )
 
@@ -99,7 +99,7 @@ class UsageAssignmentEngine:
                 real_pods_usage=real_pods_usage,
                 emulated_pods=emulated_pods,
                 mapping=new_mapping,
-                remaining_pods=remaining_real_pods,
+                remaining_emulated_pods=remaining_emulated_pods,
                 resource="cpu",
             )
 
@@ -107,7 +107,7 @@ class UsageAssignmentEngine:
                 real_pods_usage=real_pods_usage,
                 emulated_pods=emulated_pods,
                 mapping=new_mapping,
-                remaining_pods=remaining_real_pods,
+                remaining_emulated_pods=remaining_emulated_pods,
                 resource="memory",
             )
 
@@ -127,7 +127,8 @@ class UsageAssignmentEngine:
 
         return assignment
 
-    def apply_mapping(self, mapping, real_pods_usage, resource, remaining_emulated_pods=None):
+    @staticmethod
+    def apply_mapping(mapping, real_pods_usage, resource, remaining_emulated_pods=None):
         resource_assignment = {}
 
         for real_pod, emulated_pod in mapping.items():
