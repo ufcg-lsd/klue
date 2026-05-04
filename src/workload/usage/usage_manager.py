@@ -5,7 +5,7 @@ from kubernetes.client.rest import ApiException
 from kubernetes.utils.quantity import parse_quantity
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_objects.cluster_resource_usage_generator import ClusterResourceUsageGenerator
-from klue.src.workload.usage.usage_assignment import UsageAssignmentEngine
+from workload.usage.usage_assignment import UsageAssignmentEngine
 
 
 class UsageManager(multiprocessing.Process):
@@ -121,7 +121,8 @@ class UsageManager(multiprocessing.Process):
         for workload_key in list(self.last_usage_actions.keys()):
             namespace, name = workload_key
 
-            emulated_pods = self.list_emulated_pods(namespace, name)
+            emulated_pods_objects = self.list_emulated_pod_objects(namespace, name)
+            emulated_pods = self.list_alive_pod_keys(emulated_pods_objects)
             if not emulated_pods and not self.deployment_exists(namespace, name):
                 self.cleanup_workload(workload_key)
                 continue
@@ -135,9 +136,10 @@ class UsageManager(multiprocessing.Process):
             self.reconcile_workload(
                 workload_key=workload_key,
                 emulated_pods=emulated_pods,
+                emulated_pods_objects=emulated_pods_objects
             )
 
-    def reconcile_workload(self, workload_key, emulated_pods=None):
+    def reconcile_workload(self, workload_key, emulated_pods=None, emulated_pods_objects=None):
         """
         Reconcile one workload by asking UsageAssignmentEngine for the final
         pod-level assignment and applying it to the cluster.
@@ -148,14 +150,16 @@ class UsageManager(multiprocessing.Process):
         last_usage_action = self.last_usage_actions.get(workload_key)
 
         if emulated_pods is None:
-            emulated_pods = self.list_emulated_pods(namespace, name)
+            emulated_pods_objects = self.list_emulated_pod_objects(namespace, name)
+            emulated_pods = self.list_alive_pod_keys(emulated_pods_objects)
+
             if not emulated_pods and not self.deployment_exists(namespace, name):
                 self.cleanup_workload(workload_key)
                 return
 
         self.last_emulated_pods[workload_key] = emulated_pods
 
-        real_pods_limit = self.get_pod_limits(emulated_pods)
+        emulated_pods_limit = self.get_pod_limits_map(emulated_pods_objects)
 
         self.log(
             f"[INFO] Reconciling {namespace}/{name}. "
@@ -166,7 +170,7 @@ class UsageManager(multiprocessing.Process):
         assignment = self.assignment_engine.resolve(
             workload_key=workload_key,
             real_pods_usage=last_usage_action,
-            real_pods_limit=real_pods_limit,
+            emulated_pods_limit=emulated_pods_limit,
             emulated_pods=emulated_pods,
         )
 
@@ -260,30 +264,15 @@ class UsageManager(multiprocessing.Process):
         
         self.existing_crus.discard(cru_name)
 
-    def list_emulated_pods(self, namespace, workload_name):
+    def list_emulated_pod_objects(self, namespace, workload_name):
         """
         Return the exact set of live emulated pods for a workload.
         """
 
-        pods = self.k8s_api.list_namespaced_pod(
+        return self.k8s_api.list_namespaced_pod(
             namespace=namespace,
             label_selector=f"deployment={workload_name}",
         )
-
-        result = set()
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-
-            if pod.metadata.deletion_timestamp is not None:
-                continue
-
-            phase = pod.status.phase
-            if phase in {"Succeeded", "Failed"}:
-                continue
-
-            result.add((namespace, pod_name))
-
-        return result
 
     def deployment_exists(self, namespace, name):
         try:
@@ -299,10 +288,30 @@ class UsageManager(multiprocessing.Process):
             raise
     
     # --------------------------------------------------
-    # List emulated pod's limits
+    # List emulated pod's useful information
     # --------------------------------------------------
 
-    def get_pod_limits(self, pods):
+    def is_live_pod(self, pod):
+        if pod.metadata.deletion_timestamp is not None:
+            return False
+
+        if pod.status.phase in {"Succeeded", "Failed"}:
+            return False
+
+        return True
+    
+    def list_alive_pod_keys(self, pods):
+        result = set()
+        for pod in pods.items:
+            if self.is_live_pod(pod):
+                pod_name = pod.metadata.name
+                pod_namespace = pod.metadata.namespace
+
+                result.add((pod_namespace, pod_name))
+        
+        return result
+
+    def get_pod_limits_map(self, pods):
         """
         Return current resource limits for the pods of a workload.
         """
@@ -310,6 +319,9 @@ class UsageManager(multiprocessing.Process):
         result = {}
 
         for pod in pods.items:
+            if not self.is_live_pod(pod):
+                continue
+
             namespace = pod.metadata.namespace
             pod_name = pod.metadata.name
 
@@ -318,7 +330,7 @@ class UsageManager(multiprocessing.Process):
 
             for container in pod.spec.containers:
                 resources = container.resources
-                limits = resources.limits if resources.limits else {}
+                limits = resources.limits if resources and resources.limits else {}
 
                 cpu_limit_base = limits.get("cpu")
                 memory_limit_base = limits.get("memory")
