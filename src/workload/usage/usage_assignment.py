@@ -77,38 +77,38 @@ class UsageAssignmentEngine:
 
         if remaining_real_pods:
             cpu_assignment = self.compression_heuristic_cpu.generate_assignment(
-                real_pods_usage,
-                emulated_pods_limit, 
-                emulated_pods, 
-                new_mapping,
-                remaining_real_pods,
-                resource="cpu"
+                real_pods_usage=real_pods_usage,
+                emulated_pods_limit=emulated_pods_limit,
+                emulated_pods=emulated_pods,
+                mapping=new_mapping,
+                remaining_pods=remaining_real_pods,
+                resource="cpu",
             )
 
             mem_assignment = self.compression_heuristic_mem.generate_assignment(
-                real_pods_usage,
-                emulated_pods_limit, 
-                emulated_pods, 
-                new_mapping, 
-                remaining_real_pods,
-                resource="memory"
+                real_pods_usage=real_pods_usage,
+                emulated_pods_limit=emulated_pods_limit,
+                emulated_pods=emulated_pods,
+                mapping=new_mapping,
+                remaining_pods=remaining_real_pods,
+                resource="memory",
             )
 
         elif remaining_emulated_pods:
             cpu_assignment = self.expansion_heuristic_cpu.generate_assignment(
-                real_pods_usage,
-                emulated_pods, 
-                new_mapping,
-                remaining_emulated_pods,
-                resource="cpu"
+                real_pods_usage=real_pods_usage,
+                emulated_pods=emulated_pods,
+                mapping=new_mapping,
+                remaining_pods=remaining_real_pods,
+                resource="cpu",
             )
 
             mem_assignment = self.expansion_heuristic_mem.generate_assignment(
-                real_pods_usage,
-                emulated_pods, 
-                new_mapping, 
-                remaining_emulated_pods,
-                resource="memory"
+                real_pods_usage=real_pods_usage,
+                emulated_pods=emulated_pods,
+                mapping=new_mapping,
+                remaining_pods=remaining_real_pods,
+                resource="memory",
             )
 
         else:
@@ -137,7 +137,7 @@ class UsageAssignmentEngine:
         
         if remaining_emulated_pods:
             for emulated_pod in remaining_emulated_pods:
-                resource_assignment[emulated_pod] = usage
+                resource_assignment[emulated_pod] = 0
 
         return resource_assignment
 
