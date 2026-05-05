@@ -49,12 +49,10 @@ class Collector:
             metrics = [line.strip() for line in f]
         return metrics
 
-    def request_metrics(self, metric):
+    def request_metrics(self, metric, start_time, end_time):
         """
         Fetches metrics from a Prometheus server within a specified time range.
         """
-        end_time = int(time.time())  # Current time as end
-        start_time = end_time - int(self.duration.total_seconds())  # Start time based on duration
 
         if not self.step or self.step <= 0:
             self.log(f"[ERROR] Invalid step value: {self.step}. It must be a positive integer.")
@@ -76,12 +74,12 @@ class Collector:
                 self.log(f"[ERROR] Failed to fetch metric {metric}: {response.text}")
                 return None
 
-            return response
+            return response.json()
         except requests.RequestException as e:
             self.log(f"[ERROR] Request exception for metric {metric}: {e}")
             return None
 
-    def write_csv(self, output_dir):
+    def write_csv(self, output_dir, start_time, end_time):
         """
         Writes metrics data to CSV files in the specified output directory.
 
@@ -92,13 +90,13 @@ class Collector:
         """
         self.log(f"[INFO] Writing CSV files to {output_dir}")
         for metric in self.metrics:
-            response = self.request_metrics(metric)
+            data = self.request_metrics(metric, start_time, end_time)
 
-            if response is None:
+            if data is None:
                 continue
 
             try:
-                results = response.json().get("data", {}).get("result", [])
+                results = data.get("data", {}).get("result", [])
             except json.JSONDecodeError:
                 self.log(f"[ERROR] Failed to decode JSON for metric {metric}")
                 continue
@@ -109,11 +107,22 @@ class Collector:
 
             metric_name = results[0]["metric"].get("__name__", "")
 
-            with open(f"{output_dir}/{metric_name}.csv", "w", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                labelnames = list(results[0]["metric"].keys())
+            file_path = f"{output_dir}/{metric_name}.csv"
+            file_exists = os.path.isfile(file_path)
 
-                writer.writerow(["name", "timestamp", "value"] + labelnames)
+            with open(f"{output_dir}/{metric_name}.csv", "a", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                
+                # pega todas as labels possíveis (mais seguro)
+                labelnames = sorted({
+                    key
+                    for result in results
+                    for key in result["metric"].keys()
+                })
+
+                # escreve header só uma vez
+                if not file_exists:
+                    writer.writerow(["name", "timestamp", "value"] + labelnames)
 
                 for result in results:
                     for values in result["values"]:
@@ -125,7 +134,7 @@ class Collector:
                             row.append(x)
                         writer.writerow(row)
 
-    def collect(self, duration):
+    def collect(self, start_time, end_time, output_dir):
         """
         Collects metrics for a specified duration, writes them to CSV files, 
         and compresses the files into a ZIP archive.
@@ -138,14 +147,11 @@ class Collector:
             5. Compresses the CSV files into a ZIP archive.
             6. Logs the completion of the zipping process.
         """
-        self.log(f"[INFO] Collecting metrics of this emulation for {duration} seconds.")
-        self.duration = timedelta(seconds=int(duration))
+        self.log(f"[INFO] Collecting metrics from {start_time} to {end_time}")
         self.metrics = self.read_metrics()
-        now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-        output_dir = f"output_csv_{now}"
         os.makedirs(output_dir, exist_ok=True)
-        self.write_csv(output_dir)
+        self.write_csv(output_dir, start_time, end_time)
 
         # Zip the CSV files
         with zipfile.ZipFile(f"{output_dir}.zip", "w") as zip:

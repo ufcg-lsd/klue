@@ -5,6 +5,7 @@ nodeclaims, and other resources, while also handling custom logic for scaling an
 """
 
 import subprocess
+import time
 from datetime import datetime
 from pods_mapping import PodsMapping
 from collector import Collector
@@ -52,6 +53,36 @@ class Manager:
         self.pods_mapping.run()
         subprocess.run(["bash", "src/build-scheduler.sh"], check=True)
 
+    def collect_loop(self, start_time):
+
+        interval = 60  # 12h
+        safety_offset = 30    # 30s
+
+        current = start_time
+
+        self.log("[INFO] Continuous collection started")
+
+        run_id = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+        output_dir = f"output_csv_{run_id}"
+
+        self.log(f"[INFO] Using output dir: {output_dir}")
+        self.log("[INFO] Continuous collection started")
+
+        while not self.stop_collection:
+            time.sleep(interval)
+
+            end_time = int(time.time())
+
+            self.log(f"[INFO] Collecting: {current} → {end_time}")
+
+            self.collector.collect(
+                start_time=current,
+                end_time=end_time,
+                output_dir=output_dir
+            )
+
+            current = end_time + safety_offset
+
     def run(self):
         """
         Executes the main workflow of the Broker.
@@ -85,6 +116,20 @@ class Manager:
             name="WorkloadEmulationThread"
         )
 
+        start_time = int(datetime.now().timestamp())
+        self.stop_collection = False
+
+        collector_thread = threading.Thread(
+            target=self.collect_loop,
+            args=(start_time,),
+            name="CollectorThread"
+        )
+
+        self.log("[INFO] Starting collector thread")
+        collector_thread.start()
+        duration = int((datetime.now() - start).total_seconds() + 15)
+        subprocess.run(["bash", "src/port-forward.sh"], check=True)
+
         self.log("[INFO] Starting emulation thread for InfrastructureManager.")
         infra_emulation_thread.start()
         self.log("[INFO] Starting emulation thread for WorkloadManager.")
@@ -95,9 +140,9 @@ class Manager:
         workload_emulation_thread.join()
         self.log("[INFO] WorkloadManager emulation thread completed.")
 
-        duration = int((datetime.now() - start).total_seconds() + 15)
-        subprocess.run(["bash", "src/port-forward.sh"], check=True)
-        self.collector.collect(duration=duration)
+        self.stop_collection = True
+        collector_thread.join()
+        self.log("[INFO] Collector thread stopped.")
 
         self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
         self.infrastructure_manager.tear_down()
