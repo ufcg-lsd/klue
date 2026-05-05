@@ -99,8 +99,8 @@ class UsageManager(multiprocessing.Process):
         usage_action = {}
         for pod_name, usage in event.get("pods").items():
             usage_action[(namespace, pod_name)] = {
-                "cpu": usage.get("cpu", 0),
-                "memory": usage.get("memory", 0)
+                "cpu": usage.get("cpu"),
+                "memory": int(usage.get("memory"))
             }
 
         self.last_usage_actions[workload_key] = usage_action
@@ -193,7 +193,7 @@ class UsageManager(multiprocessing.Process):
             pod_namespace, pod_name = pod_key
 
             cpu = str(usage.get("cpu"))
-            memory = f'Quantity("{usage.get("memory")}Gi")' 
+            memory = f'Quantity("{int(round(usage.get("memory")))}")' 
             cru_name = f"usage-{pod_namespace}-{pod_name}"
             
             desired_crus.add(cru_name)
@@ -288,7 +288,7 @@ class UsageManager(multiprocessing.Process):
             raise
     
     # --------------------------------------------------
-    # List emulated pod's useful information
+    # Get emulated pod's useful information
     # --------------------------------------------------
 
     def is_live_pod(self, pod):
@@ -349,7 +349,7 @@ class UsageManager(multiprocessing.Process):
                 pod_limits["cpu"] = float(cpu_total)
 
             if memory_total is not None:
-                pod_limits["memory"] = float(memory_total / 1024**3)
+                pod_limits["memory"] = int(memory_total)
 
             result[(namespace, pod_name)] = pod_limits
 

@@ -948,11 +948,6 @@ class TracerKWOKOnly:
         )
 
         # =========================
-        # CONVERT MEMORY TO GiB
-        # =========================
-        usage_df['memory_usage'] = usage_df['memory_usage'] / (1024 ** 3)
-
-        # =========================
         # FINAL
         # =========================
         usage_df = usage_df.dropna(subset=["cpu_usage"], how="all")
