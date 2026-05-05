@@ -12,16 +12,15 @@ class DeploymentsGenerator:
 
     def put_cpu_unity(self, value):
         """
-        Converts the CPU value to millicores (m) and returns it as a string.
+        Returns the CPU value as a string.
         """
-        return f"{float(value) * 1000}m"
+        return f"{float(value)}"
 
     def put_memory_unity(self, value):
         """
-        Converts the memory value from bytes to MiB and returns it as a string.
+        Returns the Memory value as a string.
         """
-        mebibytes = int(value) / (2 ** 20)
-        return f"{mebibytes}Mi"
+        return f"{int(value)}"
 
     def generate_applied_deployments(self, group: pd.DataFrame):
         """
