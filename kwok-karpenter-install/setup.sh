@@ -94,3 +94,7 @@ echo "👉 Open: http://${MINIKUBE_IP}:32000"
 chmod +x setup-vpa.sh
 
 ./setup-vpa.sh # to use vpa, you need to apply an .yaml manifest with VPA configuration, e.g. vpa.yaml
+
+kubectl rollout status deployment/vpa-admission-controller -n kube-system
+kubectl rollout status deployment/vpa-recommender -n kube-system
+kubectl rollout status deployment/vpa-updater -n kube-system
