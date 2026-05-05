@@ -48,6 +48,12 @@ class K8SAPI:
     # Pods
     def list_pod_for_all_namespaces(self, **kwargs):
         return self.v1.list_pod_for_all_namespaces(**kwargs)
+    
+    def list_namespaced_pod(self, namespace, label_selector=None):
+        return self.v1.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=label_selector
+        )
 
     # Deployments
     def read_namespaced_deployment(self, name, namespace, **kwargs):
