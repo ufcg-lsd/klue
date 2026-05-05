@@ -120,7 +120,6 @@ class Collector:
                     for key in result["metric"].keys()
                 })
 
-                # escreve header só uma vez
                 if not file_exists:
                     writer.writerow(["name", "timestamp", "value"] + labelnames)
 
