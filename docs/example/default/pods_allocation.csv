@@ -1,0 +1,6 @@
+namespace,node,replicaset,owner_kind,instance_type,pods_count
+example-tenant,example-node-01.internal,sample-service,Deployment,c6a.8xlarge,1
+example-tenant,example-node-02.internal,sample-service,Deployment,c6a.4xlarge,1
+example-tenant,example-node-03.internal,sample-service,Deployment,c6a.4xlarge,1
+example-tenant,example-node-04.internal,sample-service,Deployment,c6a.8xlarge,1
+example-tenant,example-node-05.internal,sample-service,Deployment,c6a.4xlarge,1
