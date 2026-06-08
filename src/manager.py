@@ -63,7 +63,7 @@ class Manager:
                 of the first collection window.
         """
 
-        interval = 60  # 12h
+        interval = 60  # 60s
         safety_offset = 30    # 30s
 
         current = start_time
