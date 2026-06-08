@@ -29,6 +29,9 @@ class KubernetesObjectApplier:
                 self.log(f"[INFO] Deployment {name} created in namespace {namespace}.")
 
     def apply_hpa(self, obj, namespace, name):
+        """
+        Aplica um objeto do tipo HPA ao cluster.
+        """
         try:
             self.k8s_api.read_namespaced_horizontal_pod_autoscaler(name, namespace)
             self.k8s_api.patch_namespaced_horizontal_pod_autoscaler(name, namespace, obj)
