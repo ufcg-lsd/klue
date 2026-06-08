@@ -1,18 +1,18 @@
 import pandas as pd
 
 class HPAGenerator: 
-"""
-Utility for generating Kubernetes HorizontalPodAutoscaler (HPA) manifests
-from pandas DataFrame rows.
+    """
+    Utility for generating Kubernetes HorizontalPodAutoscaler (HPA) manifests
+    from pandas DataFrame rows.
 
-This class converts normalized row data into complete HPA YAML
-structures and groups them by action: create, delete, or update.
+    This class converts normalized row data into complete HPA YAML
+    structures and groups them by action: create, delete, or update.
 
-Expected assumptions:
-- CPU values come in cores.
-- Memory values come in bytes.
-- Each received row includes an `action` field indicating the intended operation.
-"""
+    Expected assumptions:
+    - CPU values come in cores.
+    - Memory values come in bytes.
+    - Each received row includes an `action` field indicating the intended operation.
+    """
     def _normalize_metric_value(self, resource_name: str, metric_value: str, metric_type: str):
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
@@ -26,19 +26,19 @@ Expected assumptions:
         return value
     
     def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str):
-    """
-    Build the HPA metric block for a single resource.
+        """
+        Build the HPA metric block for a single resource.
 
-    Supports Kubernetes resource metrics for CPU and memory only.
+        Supports Kubernetes resource metrics for CPU and memory only.
 
-    Args:
-        resource_name: Resource name used by the HPA metric, such as "cpu" or "memory".
-        metric_value: Target value for the metric.
-        metric_type: Metric target type, such as utilization, average or value.
+        Args:
+            resource_name: Resource name used by the HPA metric, such as "cpu" or "memory".
+            metric_value: Target value for the metric.
+            metric_type: Metric target type, such as utilization, average or value.
 
-    Returns:
-        A dictionary representing the metric block in the HPA spec.
-    """
+        Returns:
+            A dictionary representing the metric block in the HPA spec.
+        """
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
 
@@ -75,25 +75,25 @@ Expected assumptions:
         }
 
     def hpa_row_to_yaml(self, row_data: dict):
-    """
-    Convert a single row of HPA data into a Kubernetes HPA manifest.
+        """
+        Convert a single row of HPA data into a Kubernetes HPA manifest.
 
-    Required fields:
-    - horizontalpodautoscaler
-    - namespace
+        Required fields:
+        - horizontalpodautoscaler
+        - namespace
 
-    Optional fields:
-    - min_replicas
-    - max_replicas
-    - cpu / cpu_type
-    - memory / memory_type
+        Optional fields:
+        - min_replicas
+        - max_replicas
+        - cpu / cpu_type
+        - memory / memory_type
 
-    Args:
-        row_data: Dictionary containing the HPA row data.
+        Args:
+            row_data: Dictionary containing the HPA row data.
 
-    Returns:
-        A dictionary representing the HPA manifest.
-    """
+        Returns:
+            A dictionary representing the HPA manifest.
+        """
         name = row_data.get("horizontalpodautoscaler")
         namespace = row_data.get("namespace")
 
@@ -139,22 +139,22 @@ Expected assumptions:
 
 
     def generate_hpa_objects(self, group: pd.DataFrame):
-    """
-    Generate HPA payloads grouped by requested action.
+        """
+        Generate HPA payloads grouped by requested action.
 
-    The input DataFrame is expected to contain one row per HPA definition,
-    including an action column with one of the following values: 'apply' or 'delete'.
+        The input DataFrame is expected to contain one row per HPA definition,
+        including an action column with one of the following values: 'apply' or 'delete'.
 
-    Args:
-        group: DataFrame containing HPA definitions and action metadata.
+        Args:
+            group: DataFrame containing HPA definitions and action metadata.
 
-    Returns:
-        A tuple containing:
-        - applied_hpa_objects:
-            Dictionary where keys are namespaces and values are lists of HPA manifests to create.
-        - deleted_hpa_objects:
-            List of dictionaries with name and namespace.
-    """
+        Returns:
+            A tuple containing:
+            - applied_hpa_objects:
+                Dictionary where keys are namespaces and values are lists of HPA manifests to create.
+            - deleted_hpa_objects:
+                List of dictionaries with name and namespace.
+        """
         applied_hpa_objects = {}
         deleted_hpa_objects = []
 
