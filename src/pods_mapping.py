@@ -155,7 +155,6 @@ class PodsMapping:
 
                 fake_node_name = fake_nodes[match_index][0]
 
-                # salva mapping
                 node_mapping[real_node_name] = fake_node_name
 
                 # 🔥 remove os dois lados (como você queria)
