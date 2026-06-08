@@ -159,7 +159,6 @@ class PodsMapping:
 
                 fake_nodes.pop(match_index)
 
-        # 🔥 aplica de uma vez (sem bug)
         self.pods_allocation["node"] = self.pods_allocation["node"].map(node_mapping)
 
         self.pods_allocation.to_csv(self.PODS_ALLOCATION_PATH, index=False)
