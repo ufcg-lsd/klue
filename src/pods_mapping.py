@@ -157,7 +157,6 @@ class PodsMapping:
 
                 node_mapping[real_node_name] = fake_node_name
 
-                # 🔥 remove os dois lados (como você queria)
                 fake_nodes.pop(match_index)
 
         # 🔥 aplica de uma vez (sem bug)
