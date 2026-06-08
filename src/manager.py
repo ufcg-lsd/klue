@@ -60,7 +60,6 @@ class Manager:
 
         current = start_time
 
-        self.log("[INFO] Continuous collection started")
 
         run_id = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
         output_dir = f"output_csv_{run_id}"
