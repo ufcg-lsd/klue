@@ -1,5 +1,6 @@
 import pandas as pd
 
+class HPAGenerator: 
 """
 Utility for generating Kubernetes HorizontalPodAutoscaler (HPA) manifests
 from pandas DataFrame rows.
@@ -12,7 +13,6 @@ Expected assumptions:
 - Memory values come in bytes.
 - Each received row includes an `action` field indicating the intended operation.
 """
-class HPAGenerator:    
     def _normalize_metric_value(self, resource_name: str, metric_value: str, metric_type: str):
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
