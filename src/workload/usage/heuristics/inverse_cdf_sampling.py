@@ -125,7 +125,7 @@ class InverseCDFSamplingHeuristic:
         sum_actual_resources = sum(actual_resources)
         sum_sampled_resources = sum(sampled_resources)
 
-        if S2 == 0: 
+        if sum_sampled_resources == 0: 
             # Should not happen under normal circunstances. 
             # When it does happen, the total real resource usage is also expected to be 0, which would make 'equal_value' also equal to 0.
             equal_value = S1 / len(sampled_resources)
