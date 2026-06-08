@@ -138,6 +138,7 @@ Expected assumptions:
         return doc
 
 
+    def generate_hpa_objects(self, group: pd.DataFrame):
     """
     Generate HPA payloads grouped by requested action.
 
@@ -154,7 +155,6 @@ Expected assumptions:
         - deleted_hpa_objects:
             List of dictionaries with name and namespace.
     """
-    def generate_hpa_objects(self, group: pd.DataFrame):
         applied_hpa_objects = {}
         deleted_hpa_objects = []
 
