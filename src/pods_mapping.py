@@ -142,7 +142,6 @@ class PodsMapping:
                 real_node_name = real_node[0]
                 real_node_pool = real_node[1]
 
-                # 🔥 acha fake compatível (mesmo pool)
                 match_index = None
 
                 for i, fake_node in enumerate(fake_nodes):
