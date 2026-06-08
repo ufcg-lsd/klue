@@ -54,6 +54,14 @@ class Manager:
         subprocess.run(["bash", "src/build-scheduler.sh"], check=True)
 
     def collect_loop(self, start_time):
+        """
+        Periodically collects metrics and writes them to timestamped output
+        files while the emulation is running.
+    
+        Args:
+            start_time (int): Initial Unix timestamp used as the beginning
+                of the first collection window.
+        """
 
         interval = 60  # 12h
         safety_offset = 30    # 30s
