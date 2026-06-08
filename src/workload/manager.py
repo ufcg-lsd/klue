@@ -7,20 +7,26 @@ import time
 from kubernetes import client
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_object_applier import KubernetesObjectApplier
+import multiprocessing
+from workload.usage.usage_manager import UsageManager
 
 class WorkloadManager:
     TIME_OUT = 200
-    def __init__(self, data_path, emulation_phase):
+    def __init__(self, data_path, emulation_phase, hpa):
         """
         Initializes the Workload Manager class.
         """
         self.emulation_phase = emulation_phase
+        self.hpa = hpa
 
         self.k8s_api = K8SAPI(timeout=self.TIME_OUT)
-        self.k8s_object_applier = KubernetesObjectApplier(self.k8s_api)
+        self.k8s_object_applier = KubernetesObjectApplier(self.k8s_api, hpa)
 
         with open(data_path, 'r', encoding="utf-8") as file:
             self.data = json.load(file)
+        
+        self.usage_queue = multiprocessing.Queue()
+        self.usage_manager = UsageManager(self.usage_queue)
 
     def log(self, message):
         """
@@ -42,14 +48,31 @@ class WorkloadManager:
 
         Logs the node count during the waiting process.
         """
-        setup = self.data['setup']
+        # start UsageManager process
+        self.log("[INFO] Starting UsageManager")
+        self.usage_manager.start()
 
-        for namespace, pods in setup.items():
+        setup = self.data["setup"]
+
+        applied_objects = setup["applied_objects"]
+
+        workload_actions = setup["workload_actions"]
+
+        self.log(f"[INFO] Deploying setup objects")
+        for namespace, objects in applied_objects.items():
             self.create_namespace_if_not_exists(namespace)
-            for pod in pods:
-                self.k8s_object_applier.apply_object(pod)
+            for object in objects:
+                self.k8s_object_applier.apply_object(object)
 
         self.wait_pods_ready()
+
+        self.log(f"[INFO] Applying workload actions on setup")
+        for workload_action in workload_actions:
+            action = workload_action["action"]
+            if action == "set-usage":
+                self.set_workload_usage(workload_action)
+            elif action == "scale" and not self.hpa:
+                self.scale_workload(workload_action)
 
     def before_emulation(self):
         pass
@@ -98,31 +121,21 @@ class WorkloadManager:
                         self.log(f"[ERROR] Failed to apply objects in namespace {namespace}: {e}")
 
                 # Scale workload objects
-                for scale_info in entry.get('scaled_replicasets', []):
-                    try:
-                        name = scale_info['name']
-                        namespace = scale_info['namespace']
-                        replicas = scale_info['pods']
-                        kind = scale_info['kind']
-
-                        if kind == "deployment":
-                            self.k8s_api.patch_namespaced_deployment_scale(name, namespace, {"spec": {"replicas": replicas}})
-                        elif kind == "statefulset":
-                            # For now, we assume that scaling statefulsets is similar to deployments.
-                            self.k8s_api.patch_namespaced_deployment_scale(name, namespace, {"spec": {"replicas": replicas}})
-                        self.log(f"[INFO] Scaled {kind} {name} to {replicas} replicas in namespace {namespace}")
-                    except Exception as e:
-                        self.log(f"[ERROR] Failed to scale {kind} {name} in namespace {namespace}: {e}")
+                for workload_action in entry.get('workload_actions', []):
+                    action = workload_action["action"]
+                    if action == "set-usage":
+                        self.set_workload_usage(workload_action)
+                    elif action == "scale" and not self.hpa:
+                        self.scale_workload(workload_action)
 
                 # Delete workload objects
                 for delete_info in entry.get('deleted_objects', []):
                     try:
-                        name = delete_info['name']
-                        namespace = delete_info['namespace']
-                        kind = delete_info.get('kind', 'deployment')
+                        name = delete_info.get('name', '<unknown>')
+                        namespace = delete_info.get('namespace', '<unknown>')
+                        kind = delete_info.get('kind', '<unknown>')
 
-                        self.k8s_api.delete_namespaced_deployment(name, namespace)
-                        self.log(f"[INFO] Deleted {kind} {name} in namespace {namespace}")
+                        self.k8s_object_applier.delete_object(delete_info)
                     except Exception as e:
                         self.log(f"[ERROR] Failed to delete {kind} {name} in namespace {namespace}: {e}")
 
@@ -131,7 +144,8 @@ class WorkloadManager:
         time.sleep(15)
 
     def tear_down(self):
-        pass
+        self.usage_queue.put("STOP")
+        self.usage_manager.join()
 
     def wait_pods_ready(self):
         """
@@ -145,10 +159,17 @@ class WorkloadManager:
         The method uses a 2-second interval between checks to avoid excessive polling.
         """
         expected_pods = 0
+            
+        for namespace_objects in self.data['setup']['applied_objects'].values():
+            for obj in namespace_objects:
+                kind = obj.get("kind", "").lower()
+                replica_count = obj.get("spec", {}).get("replicas", 0)
 
-        for i in self.data['setup'].keys():
-            for j in range(len(self.data['setup'][i])):
-                expected_pods += self.data['setup'][i][j]['spec']['replicas']
+                if kind in {"deployment", "statefulset"}:
+                    expected_pods += replica_count
+                elif replica_count:
+                    self.log(f"[WARNING] Object is not a Deployment or StatefulSet but has replicas={replica_count}. Counting it as workload.")
+                    expected_pods += replica_count
 
         while (current_pods := self.count_pods_excluding_namespaces()) != expected_pods:
             self.log(f"[INFO] Current pods: {current_pods}, Expected: {expected_pods}")
@@ -188,3 +209,25 @@ class WorkloadManager:
         excluded_namespaces = ["kube-system", "monitoring"]
         pods = self.k8s_api.list_pod_for_all_namespaces()
         return sum(1 for pod in pods.items if pod.metadata.namespace not in excluded_namespaces)
+    
+    def set_workload_usage(self, usage_info):
+        try:
+            self.usage_queue.put(usage_info)
+        except Exception as e:
+            self.log(f"[ERROR] Failed to send usage event: {e}")
+    
+    def scale_workload(self, scale_info):
+        try:
+            name = scale_info['name']
+            namespace = scale_info['namespace']
+            replicas = scale_info['pods']
+            kind = scale_info['kind']
+
+            if kind == "deployment":
+                self.k8s_api.patch_namespaced_deployment_scale(name, namespace, {"spec": {"replicas": replicas}})
+            elif kind == "statefulset":
+                # For now, we assume that scaling statefulsets is similar to deployments.
+                self.k8s_api.patch_namespaced_deployment_scale(name, namespace, {"spec": {"replicas": replicas}})
+                self.log(f"[INFO] Scaled {kind} {name} to {replicas} replicas in namespace {namespace}")
+        except Exception as e:
+            self.log(f"[ERROR] Failed to scale {kind} {name} in namespace {namespace}: {e}")

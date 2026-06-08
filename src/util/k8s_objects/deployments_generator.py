@@ -12,16 +12,15 @@ class DeploymentsGenerator:
 
     def put_cpu_unity(self, value):
         """
-        Converts the CPU value to millicores (m) and returns it as a string.
+        Returns the CPU value as a string.
         """
-        return f"{int(float(value) * 1000)}m"
+        return f"{float(value)}"
 
     def put_memory_unity(self, value):
         """
-        Converts the memory value from bytes to MiB and returns it as a string.
+        Returns the Memory value as a string.
         """
-        mebibytes = int(value) // (2 ** 20)
-        return f"{mebibytes}Mi"
+        return f"{int(value)}"
 
     def generate_applied_deployments(self, group: pd.DataFrame):
         """
@@ -65,28 +64,37 @@ class DeploymentsGenerator:
                     "deployment": row['replicaset']
                 }
 
+                node_selector = {"kwok.x-k8s.io/node": "true"}
+                
                 pod_template = {
                     "metadata": {"labels": labels},
                     "spec": {
+                        "nodeSelector": node_selector,
                         "schedulerName": "custom-scheduler",
                         "affinity": affinity,
                         "tolerations": tolerations,
                         "containers": [
                             {
-                                "name": "fake-container",
+                                "name": row['replicaset'],
                                 "image": "fake-image",
                                 "resources": {
-                                    "requests": {}
+                                    "requests": {},
+                                    "limits": {}
                                 },
                             }
                         ],
                     },
                 }
 
-                if row['cpu'] != 'NA':
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(row['cpu'])
-                if row['memory'] != 'NA':
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(row['memory'])
+                if pd.notna(row['cpu_request']):
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(row['cpu_request'])
+                if pd.notna(row['memory_request']):
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(row['memory_request'])
+
+                if pd.notna(row['cpu_limit']):
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["cpu"] = self.put_cpu_unity(row['cpu_limit'])
+                if pd.notna(row['memory_limit']):
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["memory"] = self.put_memory_unity(row['memory_limit'])
 
                 deployment = {
                     "apiVersion": "apps/v1",
@@ -114,7 +122,7 @@ class DeploymentsGenerator:
         deleted_deployments = []
 
         for _, row in group[group['action'] == 'delete'].iterrows():
-            deleted_deployments.append({"name": row['replicaset'], "namespace": row['namespace']})
+            deleted_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "kind": row["owner_kind"]})
 
         return deleted_deployments
 
@@ -126,6 +134,6 @@ class DeploymentsGenerator:
         scaled_deployments = []
 
         for _, row in group[group['action'] == 'scale'].iterrows():
-            scaled_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "pods": row['pods'], "kind": row['owner_kind'].lower()})
+            scaled_deployments.append({"name": row['replicaset'], "namespace": row['namespace'], "pods": row['pods'], "kind": row['owner_kind'].lower(), "action": "scale"})
 
         return scaled_deployments

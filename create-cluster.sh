@@ -74,7 +74,7 @@ if [ "$CLUSTER_CHOICE" == "1" ]; then
 
 elif [ "$CLUSTER_CHOICE" == "2" ]; then
     echo "Minikube selected. (Add your code here to create the Minikube cluster)"
-    minikube start --cpus='4' --memory='6g'
+    minikube start --cpus='4' --memory='6g' --driver=docker --ports=32000:32000
 else
     echo "Invalid option. Exiting."
     exit 1

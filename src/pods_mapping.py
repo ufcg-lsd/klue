@@ -116,31 +116,53 @@ class PodsMapping:
 
     def map_fake_and_real_nodes(self, fake_nodes_dict, real_nodes_dict):
         """
-        Maps fake nodes to real nodes based on their instance types and identifiers.
-
-        This method updates the `pods_allocation` DataFrame by replacing real node names
-        with corresponding fake node names. It ensures that each real node has a matching
-        fake node in the provided dictionaries. If a match is not found, the program logs
-        an error and exits.
+        1:1 mapping consuming both lists (real → fake), no round robin.
         """
-        self.log("[INFO] Mapping fake nodes to real nodes.")
-        for real_instance_type, real_nodes in real_nodes_dict.items():
-            if real_instance_type not in fake_nodes_dict:
-                self.log(f"[ERROR] Instance type {real_instance_type} not found in the cluster.")
+
+        self.log("[INFO] Mapping fake nodes to real nodes (1:1).")
+
+        self.pods_allocation.to_csv("/tmp/pods_allocation_before_node_map.csv", index=False)
+
+        node_mapping = {}
+
+        for instance_type, real_nodes in real_nodes_dict.items():
+
+            if instance_type not in fake_nodes_dict:
+                self.log(f"[ERROR] Instance type {instance_type} not found.")
+                exit()
+
+            fake_nodes = fake_nodes_dict[instance_type].copy()  # 🔥 importante
+
+            if len(fake_nodes) < len(real_nodes):
+                self.log(f"[ERROR] Not enough fake nodes for instance type {instance_type}.")
                 exit()
 
             for real_node in real_nodes:
-                for fake_node_index, fake_node in enumerate(fake_nodes_dict[real_instance_type]):
-                    if fake_node[1] == real_node[1]:
-                        self.pods_allocation.loc[self.pods_allocation["node"] == real_node[0], "node"] = fake_node[0]
-                        fake_nodes_dict[real_instance_type].pop(fake_node_index)
+
+                real_node_name = real_node[0]
+                real_node_pool = real_node[1]
+
+                match_index = None
+
+                for i, fake_node in enumerate(fake_nodes):
+                    if fake_node[1] == real_node_pool:
+                        match_index = i
                         break
 
-                else:
-                    self.log(f"[ERROR] No fake node found for the real node: {real_node}")
+                if match_index is None:
+                    self.log(f"[ERROR] No fake node for {real_node}")
                     exit()
 
+                fake_node_name = fake_nodes[match_index][0]
+
+                node_mapping[real_node_name] = fake_node_name
+
+                fake_nodes.pop(match_index)
+
+        self.pods_allocation["node"] = self.pods_allocation["node"].map(node_mapping)
+
         self.pods_allocation.to_csv(self.PODS_ALLOCATION_PATH, index=False)
+        self.pods_allocation.to_csv("/tmp/pods_allocation_node_map.csv", index=False)
 
     def map_pods_and_nodes(self, replicaset_pod_dict):
         """
