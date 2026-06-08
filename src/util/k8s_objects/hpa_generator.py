@@ -74,6 +74,7 @@ Expected assumptions:
             },
         }
 
+    def hpa_row_to_yaml(self, row_data: dict):
     """
     Convert a single row of HPA data into a Kubernetes HPA manifest.
 
@@ -93,7 +94,6 @@ Expected assumptions:
     Returns:
         A dictionary representing the HPA manifest.
     """
-    def hpa_row_to_yaml(self, row_data: dict):
         name = row_data.get("horizontalpodautoscaler")
         namespace = row_data.get("namespace")
 
