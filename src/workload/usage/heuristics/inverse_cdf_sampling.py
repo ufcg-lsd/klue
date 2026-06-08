@@ -131,7 +131,7 @@ class InverseCDFSamplingHeuristic:
             equal_value = S1 / len(sampled_resources)
             return [equal_value] * len(sampled_resources)
 
-        return [n * S1/S2 for n in sampled_resources]
+        return [n * sum_actual_resources/sum_sampled_resources for n in sampled_resources]
 
     def _find_closest_index(self, values, target):
         """
