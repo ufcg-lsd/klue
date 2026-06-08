@@ -25,6 +25,7 @@ Expected assumptions:
 
         return value
     
+    def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str):
     """
     Build the HPA metric block for a single resource.
 
@@ -38,7 +39,6 @@ Expected assumptions:
     Returns:
         A dictionary representing the metric block in the HPA spec.
     """
-    def _build_metric_yaml(self, resource_name: str, metric_value: str, metric_type: str):
         if pd.isna(metric_value) or pd.isna(metric_type):
             return None
 
