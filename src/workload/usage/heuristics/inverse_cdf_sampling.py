@@ -122,7 +122,7 @@ class InverseCDFSamplingHeuristic:
 
         This preserves the total workload usage after expansion.
         """
-        S1 = sum(actual_resources)
+        sum_actual_resources = sum(actual_resources)
         S2 = sum(sampled_resources)
 
         if S2 == 0: 
