@@ -10,6 +10,17 @@ class UsageWorkloadActionGenerator:
         pass
 
     def generate_usage_workload_action(self, group: pd.DataFrame) -> list:
+        """
+        Creates a set-usage action for each workload found in the input
+        DataFrame.
+
+        Args:
+            group: DataFrame containing namespace, workload name, pod,
+                cpu_usage, and memory_usage columns.
+
+        Returns:
+            List of set-usage action dictionaries.
+        """
         usage_workload_actions = []
 
         grouped_usage = group.groupby(
