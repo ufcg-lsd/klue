@@ -2,7 +2,8 @@ import pandas as pd
 
 class UsageWorkloadActionGenerator:
     """
-    Generates set-usage actions from pod-level usage rows.
+    Generates workload usage actions by grouping pod-level CPU and memory
+    metrics by workload.
     """
 
     def __init__(self):
