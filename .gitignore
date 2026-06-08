@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .vscode/
 
+.DS_Store
 # Playground is the place to devs that may not be uploaded
 playground/
 
