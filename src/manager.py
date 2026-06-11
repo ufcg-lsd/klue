@@ -165,10 +165,10 @@ class Manager:
                 self.workload_manager.tear_down()
             except Exception:
                 self.log("[ERROR] Failed to tear down workload. Traceback follows.")
-                traceback.print_exc()
+                self.log(f"[ERROR] Failed to tear down workload: {error}")
 
             try:
                 self.infrastructure_manager.tear_down()
             except Exception:
                 self.log("[ERROR] Failed to tear down infrastructure. Traceback follows.")
-                traceback.print_exc()
+                self.log(f"[ERROR] Failed to tear down infrastructure: {error}")
