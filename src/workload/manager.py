@@ -145,10 +145,10 @@ class WorkloadManager:
 
     def tear_down(self):
         self.usage_queue.put("STOP")
-        self.usage_manager.join(timeout=300)
+        self.usage_manager.join(timeout=30)
 
         if self.usage_manager.is_alive():
-            self.log("[WARNING] UsageManager did not stop after 300s. Terminating.")
+            self.log("[WARNING] UsageManager did not stop after 30s. Terminating.")
             self.usage_manager.terminate()
             self.usage_manager.join(timeout=30)
 
