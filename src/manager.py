@@ -98,6 +98,8 @@ class Manager:
         """
         self.log("[INFO] Starting Broker.")
 
+        collector_thread = None
+
         try:
             self.log("[INFO] Preparing to start emulation.")
             self.infrastructure_manager.before_setup()
@@ -153,8 +155,9 @@ class Manager:
         finally:
             self.stop_collection = True
 
-            collector_thread.join()
-            self.log("[INFO] Collector thread stopped.")
+            if collector_thread:
+                collector_thread.join()
+                self.log("[INFO] Collector thread stopped.")
 
             self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
 
