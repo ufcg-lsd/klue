@@ -97,60 +97,75 @@ class Manager:
         This method orchestrates the entire lifecycle of the Broker's operation.
         """
         self.log("[INFO] Starting Broker.")
-        self.log("[INFO] Preparing to start emulation.")
-        self.infrastructure_manager.before_setup()
-        self.workload_manager.before_setup()
 
-        self.log("[INFO] Executing setup of infrastructure and workload.")
-        self.infrastructure_manager.setup()
-        self.workload_manager.setup()
+        try:
+            self.log("[INFO] Preparing to start emulation.")
+            self.infrastructure_manager.before_setup()
+            self.workload_manager.before_setup()
 
-        self.start_mapping_and_scheduler()
+            self.log("[INFO] Executing setup of infrastructure and workload.")
+            self.infrastructure_manager.setup()
 
-        self.workload_manager.before_emulation()
-        self.infrastructure_manager.before_emulation()
+            self.workload_manager.setup()
 
-        self.log("[INFO] Starting emulation.")
-        start = datetime.now()
+            self.start_mapping_and_scheduler()
 
-        # 1. Criar as threads para os métodos de emulação
-        infra_emulation_thread = threading.Thread(
-            target=self.infrastructure_manager.emulation,
-            name="InfraEmulationThread"
-        )
-        workload_emulation_thread = threading.Thread(
-            target=self.workload_manager.emulation,
-            name="WorkloadEmulationThread"
-        )
+            self.workload_manager.before_emulation()
+            self.infrastructure_manager.before_emulation()
 
-        start_time = int(datetime.now().timestamp())
-        self.stop_collection = False
+            self.log("[INFO] Starting emulation.")
+            start = datetime.now()
 
-        collector_thread = threading.Thread(
-            target=self.collect_loop,
-            args=(start_time,),
-            name="CollectorThread"
-        )
+            # 1. Criar as threads para os métodos de emulação
+            infra_emulation_thread = threading.Thread(
+                target=self.infrastructure_manager.emulation,
+                name="InfraEmulationThread"
+            )
+            workload_emulation_thread = threading.Thread(
+                target=self.workload_manager.emulation,
+                name="WorkloadEmulationThread"
+            )
 
-        self.log("[INFO] Starting collector thread")
-        collector_thread.start()
-        duration = int((datetime.now() - start).total_seconds() + 15)
-        subprocess.run(["bash", "src/port-forward.sh"], check=True)
+            start_time = int(datetime.now().timestamp())
+            self.stop_collection = False
 
-        self.log("[INFO] Starting emulation thread for InfrastructureManager.")
-        infra_emulation_thread.start()
-        self.log("[INFO] Starting emulation thread for WorkloadManager.")
-        workload_emulation_thread.start()
-    
-        infra_emulation_thread.join()
-        self.log("[INFO] InfrastructureManager emulation thread completed.")
-        workload_emulation_thread.join()
-        self.log("[INFO] WorkloadManager emulation thread completed.")
+            collector_thread = threading.Thread(
+                target=self.collect_loop,
+                args=(start_time,),
+                name="CollectorThread"
+            )
 
-        self.stop_collection = True
-        collector_thread.join()
-        self.log("[INFO] Collector thread stopped.")
+            self.log("[INFO] Starting collector thread")
+            collector_thread.start()
+            duration = int((datetime.now() - start).total_seconds() + 15)
+            subprocess.run(["bash", "src/port-forward.sh"], check=True)
 
-        self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
-        self.infrastructure_manager.tear_down()
-        self.workload_manager.tear_down()
+            self.log("[INFO] Starting emulation thread for InfrastructureManager.")
+            infra_emulation_thread.start()
+            self.log("[INFO] Starting emulation thread for WorkloadManager.")
+            workload_emulation_thread.start()
+        
+            infra_emulation_thread.join()
+            self.log("[INFO] InfrastructureManager emulation thread completed.")
+            workload_emulation_thread.join()
+            self.log("[INFO] WorkloadManager emulation thread completed.")
+
+        finally:
+            self.stop_collection = True
+
+            collector_thread.join()
+            self.log("[INFO] Collector thread stopped.")
+
+            self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
+
+            try:
+                self.workload_manager.tear_down()
+            except Exception:
+                self.log("[ERROR] Failed to tear down workload. Traceback follows.")
+                traceback.print_exc()
+
+            try:
+                self.infrastructure_manager.tear_down()
+            except Exception:
+                self.log("[ERROR] Failed to tear down infrastructure. Traceback follows.")
+                traceback.print_exc()
