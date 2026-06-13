@@ -16,359 +16,620 @@ class TracerKarpenter:
 
     Parameters:
         kube_pod_container_resource_requests_path (str): Path to the CSV file containing pod container resource requests.
+        kube_pod_container_resource_limits_path (str): Path to the CSV file containing pod container resource limits.
+        container_cpu_usage_seconds_total_path (str): Path to the CSV file containing container CPU usage counter.
+        container_memory_usage_bytes_path (str): Path to the CSV file containing container memory usage.
         karpenter_pods_state_path (str): Path to the CSV file containing Karpenter pod state information.
         kube_pod_owner_path (str): Path to the CSV file containing pod owner information.
         kube_replicaset_owner_path (str): Path to the CSV file containing replicaset owner information.
+        instance_types_path (str): Path to the JSON file containing instance type definitions.
+        hpa_spec_max_replicas_path (str): Path to the CSV file containing HPA max replicas specifications.
+        hpa_spec_min_replicas_path (str): Path to the CSV file containing HPA min replicas specifications.
+        hpa_target_metric_path (str): Path to the CSV file containing HPA target metrics.
     """
 
-    def __init__(self, kube_pod_container_resource_requests_path, karpenter_pods_state_path, kube_pod_owner_path, kube_replicaset_owner_path, instance_types_path):
-        """
-        Initializes the Tracer class with the paths to various Kubernetes-related data files.
-        """
+    def __init__(
+        self,
+        kube_pod_container_resource_requests_path,
+        kube_pod_container_resource_limits_path,
+        container_cpu_usage_seconds_total_path,
+        container_memory_usage_bytes_path,
+        karpenter_pods_state_path,
+        kube_pod_owner_path,
+        kube_replicaset_owner_path,
+        instance_types_path,
+        hpa_spec_max_replicas_path,
+        hpa_spec_min_replicas_path,
+        hpa_target_metric_path,
+    ):
         self.kube_pod_container_resource_requests_path = kube_pod_container_resource_requests_path
+        self.kube_pod_container_resource_limits_path = kube_pod_container_resource_limits_path
+        self.container_cpu_usage_seconds_total_path = container_cpu_usage_seconds_total_path
+        self.container_memory_usage_bytes_path = container_memory_usage_bytes_path
         self.karpenter_pods_state_path = karpenter_pods_state_path
         self.kube_pod_owner_path = kube_pod_owner_path
         self.kube_replicaset_owner_path = kube_replicaset_owner_path
         self.instance_types_path = instance_types_path
+        self.hpa_spec_max_replicas_path = hpa_spec_max_replicas_path
+        self.hpa_spec_min_replicas_path = hpa_spec_min_replicas_path
+        self.hpa_target_metric_path = hpa_target_metric_path
         self.k8s_objects_generator = K8SObjectGenerator()
 
     def log(self, message):
-        """
-        Logs a message with a "[TRACER]" prefix.
-        """
         print(f"[TRACER] {message}")
 
     def load_data(self):
-        """
-        Load data from CSV files into pandas DataFrames.
-        Logs an informational message before loading the data.
-        """
         self.log("[INFO] Loading data from CSV files.")
         self.kube_pod_container_resource_requests = pd.read_csv(self.kube_pod_container_resource_requests_path)
+        self.kube_pod_container_resource_limits = pd.read_csv(self.kube_pod_container_resource_limits_path)
+        self.container_cpu_usage_seconds_total = pd.read_csv(self.container_cpu_usage_seconds_total_path)
+        self.container_memory_usage_bytes = pd.read_csv(self.container_memory_usage_bytes_path)
         self.karpenter_pods_state = pd.read_csv(self.karpenter_pods_state_path)
         self.kube_pod_owner = pd.read_csv(self.kube_pod_owner_path)
         self.kube_replicaset_owner = pd.read_csv(self.kube_replicaset_owner_path)
+        self.hpa_spec_max_replicas = pd.read_csv(self.hpa_spec_max_replicas_path)
+        self.hpa_spec_min_replicas = pd.read_csv(self.hpa_spec_min_replicas_path)
+        self.hpa_target_metric = pd.read_csv(self.hpa_target_metric_path)
 
     def normalize_timestamps(self, dfs_list):
         """
         Normalizes the timestamps in a list of DataFrames by aligning them to a fixed range of values.
-
-        This method adjusts the "timestamp" column in each DataFrame by subtracting the minimum timestamp
-        value from all timestamps in that DataFrame. It then filters the timestamps to retain only those
-        that match a predefined list of fixed intervals (0 to 14400, with a step of 300 by default).
         """
         all_timestamps = dfs_list[0]['timestamp'].unique()
         all_timestamps.sort()
-        min_timestamp = all_timestamps[0]
-        max_timestamp = all_timestamps[-1]
+
+        self.min_timestamp = all_timestamps[0]
+        self.max_timestamp = all_timestamps[-1]
         self.step = all_timestamps[1] - all_timestamps[0] if len(all_timestamps) > 1 else 0
 
-        # Get normalized informations from all metrics
-        min_timestamp_normalized = min_timestamp - min_timestamp
-        max_timestamp_normalized = max_timestamp - min_timestamp
+        min_timestamp_normalized = 0
+        max_timestamp_normalized = self.max_timestamp - self.min_timestamp
         timestamps = list(range(min_timestamp_normalized, max_timestamp_normalized + 1, self.step))
 
-        # Normalize the timestamps of each DataFrame
         normalized_dfs = []
         for df in dfs_list:
             if "timestamp" in df.columns:
-                min_timestamp = df["timestamp"].min()
                 df = df.copy()
-                df["timestamp"] = df["timestamp"] - min_timestamp
-                # Filter to keep only the timestamps that are in the fixed list
+                df["timestamp"] = df["timestamp"] - self.min_timestamp
                 df = df[df["timestamp"].isin(timestamps)]
             normalized_dfs.append(df)
         return normalized_dfs
 
     def preprocess_dataframes(self):
-        """
-        Preprocesses multiple dataframes by normalizing their timestamps.
-
-        This method logs the preprocessing step and applies the `normalize_timestamps` 
-        function to all dataframes in the class. It ensures that all timestamps are aligned.
-
-        The normalized dataframes are then reassigned to their respective attributes.
-        """
         self.log("[INFO] Preprocessing dataframes.")
-        self.kube_pod_container_resource_requests, \
-        self.karpenter_pods_state, \
-        self.kube_pod_owner, \
-        self.kube_replicaset_owner = self.normalize_timestamps([
+        (
             self.kube_pod_container_resource_requests,
+            self.kube_pod_container_resource_limits,
+            self.container_cpu_usage_seconds_total,
+            self.container_memory_usage_bytes,
             self.karpenter_pods_state,
             self.kube_pod_owner,
-            self.kube_replicaset_owner
+            self.kube_replicaset_owner,
+            self.hpa_spec_max_replicas,
+            self.hpa_spec_min_replicas,
+            self.hpa_target_metric,
+        ) = self.normalize_timestamps([
+            self.kube_pod_container_resource_requests,
+            self.kube_pod_container_resource_limits,
+            self.container_cpu_usage_seconds_total,
+            self.container_memory_usage_bytes,
+            self.karpenter_pods_state,
+            self.kube_pod_owner,
+            self.kube_replicaset_owner,
+            self.hpa_spec_max_replicas,
+            self.hpa_spec_min_replicas,
+            self.hpa_target_metric,
         ])
 
     def select_necessary_columns(self):
-        """
-        Selects and processes the necessary columns from multiple DataFrame attributes.
-
-        This method performs the following operations:
-        1. Ensures the 'pod' column exists in `karpenter_pods_state` by copying data from the 'name.1' column if necessary.
-        2. Filters `karpenter_pods_state` to retain only the specified columns: 
-           ['timestamp', 'instance_type', 'node', 'pod', 'nodepool', 'phase'].
-        3. Filters `kube_pod_container_resource_requests` to retain only the specified columns: 
-           ['timestamp', 'pod', 'namespace', 'value', 'resource', 'node'].
-        4. Removes duplicate rows in `kube_pod_owner` based on the 'pod' column, keeping the first occurrence, 
-           and retains only the columns: ['pod', 'owner_name', 'owner_kind'].
-        5. Removes duplicate rows in `kube_replicaset_owner` based on the 'replicaset' column, keeping the first occurrence, 
-           and retains only the columns: ['replicaset', 'owner_kind', 'owner_name'].
-        """
         if "pod" not in self.karpenter_pods_state.columns:
-            self.karpenter_pods_state["pod"] = self.karpenter_pods_state["name.1"]
+            self.karpenter_pods_state["pod"] = self.karpenter_pods_state["name...4"]
 
-        # Selecting only the desired final columns
         self.karpenter_pods_state = self.karpenter_pods_state[['timestamp', 'instance_type', 'node', 'pod', 'nodepool', 'phase']]
 
         self.kube_pod_container_resource_requests = self.kube_pod_container_resource_requests[["timestamp", "pod", "namespace", "value", "resource", "node"]]
+        self.kube_pod_container_resource_limits = self.kube_pod_container_resource_limits[["timestamp", "pod", "namespace", "value", "resource", "node"]]
 
-        self.kube_pod_owner = self.kube_pod_owner.drop_duplicates(subset='pod', keep='first')
-        self.kube_pod_owner = self.kube_pod_owner[['pod', 'owner_name', 'owner_kind']]
+        self.container_cpu_usage_seconds_total = self.container_cpu_usage_seconds_total[['timestamp', 'namespace', 'pod', 'container', 'value']]
+        self.container_memory_usage_bytes = self.container_memory_usage_bytes[['timestamp', 'namespace', 'pod', 'container', 'value']]
 
-        self.kube_replicaset_owner = self.kube_replicaset_owner.drop_duplicates(subset='replicaset', keep='first')
-        self.kube_replicaset_owner = self.kube_replicaset_owner[['replicaset', 'owner_kind', 'owner_name']]
+        self.kube_pod_owner = (
+            self.kube_pod_owner[["namespace", "pod", "owner_name", "owner_kind"]]
+            .drop_duplicates()
+        )
+
+        self.kube_replicaset_owner = (
+            self.kube_replicaset_owner[['namespace', 'replicaset', 'owner_kind', 'owner_name']]
+            .drop_duplicates()
+        )
+
+        self.hpa_spec_max_replicas = self.hpa_spec_max_replicas[["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "max_replicas"})
+        self.hpa_spec_min_replicas = self.hpa_spec_min_replicas[["timestamp", "value", "horizontalpodautoscaler", "namespace"]].rename(columns={"value": "min_replicas"})
+        self.hpa_target_metric = self.hpa_target_metric[["timestamp", "value", "metric_name", "horizontalpodautoscaler", "namespace", "metric_target_type"]]
 
     def merge_pods_state_with_resources(self):
         """
-        Merges Kubernetes pod state data with resource request data, processes the combined data,
-        and generates a final DataFrame with aggregated and pivoted information.
-
-        This method performs the following steps:
-        1. Merges `self.kube_pod_container_resource_requests` and `self.karpenter_pods_state` DataFrames
-           using `timestamp` and `pod` as keys, with a left join.
-        2. Fills missing `node` values by prioritizing `node_karpenter_state` over `node_resource_requests`.
-        3. Replaces missing values in `node`, `instance_type`, and `phase` columns with default values.
-        4. Fills missing data for each pod using forward-fill and backward-fill methods.
-        5. Removes duplicate rows from the merged DataFrame.
-        6. Aggregates CPU and memory resource values for each unique combination of timestamp, pod, and other attributes.
-        7. Pivots the `resource` column into separate `cpu` and `memory` columns.
-        8. Filters out rows where either `cpu` or `memory` is missing (marked as 'NA').
-        9. Logs the total number of unique pods remaining after filtering.
+        Merges pod state (from karpenter_pods_state) with resource requests and limits,
+        producing cpu_request, memory_request, cpu_limit, memory_limit columns.
         """
-        # Direct merge using 'timestamp' and 'pod' as keys
         df_merged = pd.merge(
-            self.kube_pod_container_resource_requests,
+            pd.concat(
+                [
+                    self.kube_pod_container_resource_requests.assign(resource_kind="request"),
+                    self.kube_pod_container_resource_limits.assign(resource_kind="limit"),
+                ],
+                ignore_index=True
+            ),
             self.karpenter_pods_state,
             on=["timestamp", "pod"],
             how="left",
-            suffixes=('_resource_requests', '_karpenter_state')
+            suffixes=("_resource", "_karpenter_state")
         ).assign(
-            node=lambda df: df["node_karpenter_state"].fillna(df["node_resource_requests"])
+            node=lambda df: df["node_karpenter_state"].fillna(df["node_resource"])
         ).drop(
-            columns=["node_resource_requests", "node_karpenter_state"]
+            columns=["node_resource", "node_karpenter_state"]
         )
+
+        df_merged = df_merged.sort_values(["namespace", "pod", "timestamp"])
+
+        nodepool_missing = df_merged["nodepool"].isna() | df_merged["nodepool"].eq("unallocated")
+        if nodepool_missing.any():
+            df_merged.loc[nodepool_missing, "nodepool"] = pd.NA
+            df_merged["nodepool"] = (
+                df_merged.groupby(["namespace", "pod"])["nodepool"]
+                .transform(lambda values: values.ffill().bfill())
+            )
+            inferred_count = int((nodepool_missing & df_merged["nodepool"].notna()).sum())
+            if inferred_count:
+                self.log(f"[INFO] Inferred nodepool for {inferred_count} rows from another occurrence of the same pod.")
 
         df_merged["node"] = df_merged["node"].fillna("unallocated")
         df_merged["instance_type"] = df_merged["instance_type"].fillna("unallocated")
+        df_merged["nodepool"] = df_merged["nodepool"].fillna("unallocated")
         df_merged["phase"] = df_merged["phase"].fillna("Pending")
 
-        # Filling the dataframe with the closest occurrence of this pod where there are NA values
-        df_merged = df_merged.ffill().bfill()
+        cols_to_fill = ["resource_kind", "resource", "value", "node", "instance_type", "nodepool", "phase"]
+        df_merged[cols_to_fill] = (
+            df_merged.groupby(["namespace", "pod"])[cols_to_fill]
+            .ffill()
+            .bfill()
+        )
 
-        # Remove duplicate rows, keeping only unique ones
         df_merged = df_merged.drop_duplicates()
 
-        # Sum all occurrences of CPU and memory for each timestamp of a pod
-        df_merged = df_merged.groupby(['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node', 'resource']).agg({
-            'value': 'sum'
-        }).reset_index()
+        df_merged = df_merged.groupby(
+            ["timestamp", "pod", "namespace", "instance_type", "nodepool", "node", "resource_kind", "resource"],
+            as_index=False
+        ).agg({"value": "sum"})
 
-        # Use pivot to transform 'resource' into separate columns for 'cpu' and 'memory'
-        df_pivoted = df_merged.pivot(index=['timestamp', 'pod', 'namespace', 'nodepool', 'instance_type', 'node'],
-                            columns='resource',
-                            values='value').reset_index()
+        df_merged["metric"] = df_merged["resource"] + "_" + df_merged["resource_kind"]
+        df_pivoted = df_merged.pivot(
+            index=["timestamp", "pod", "namespace", "instance_type", "nodepool", "node"],
+            columns="metric",
+            values="value"
+        ).reset_index()
 
-        # Fill missing values with 'NA' for CPU and memory
-        df_pivoted['cpu'] = df_pivoted['cpu'].fillna('NA')
-        df_pivoted['memory'] = df_pivoted['memory'].fillna('NA')
+        for col in ["cpu_request", "memory_request", "cpu_limit", "memory_limit"]:
+            if col not in df_pivoted.columns:
+                df_pivoted[col] = float("nan")
+            else:
+                df_pivoted[col] = pd.to_numeric(df_pivoted[col], errors="coerce")
 
-        self.df_final = df_pivoted[~((df_pivoted['cpu'] == 'NA') | (df_pivoted['memory'] == 'NA'))]
+        self.df_final = df_pivoted[df_pivoted["cpu_request"].notna() & df_pivoted["memory_request"].notna()]
 
-        # Total count of unique pods created and removed
         total_pods = self.df_final['pod'].nunique()
         self.log(f"[INFO] Number of pods after remove NAs and pods that finish on first timestamp: {total_pods}")
 
     def merge_pods_resources_with_pod_owner(self):
-        """
-        Merges the DataFrame `df_final` with the `kube_pod_owner` DataFrame on the 'pod' column,
-        using a left join. This operation associates each pod with its corresponding owner
-        information. After the merge, the 'owner_name' column is renamed to 'replicaset'.
-
-        This method is useful for enriching pod resource data with ownership details, such as
-        identifying which ReplicaSet a pod belongs to.
-        """
-        self.df_final = pd.merge(self.df_final, self.kube_pod_owner, on='pod', how='left')
-
+        self.df_final = pd.merge(self.df_final, self.kube_pod_owner, on=['namespace', 'pod'], how='left')
         self.df_final.rename(columns={'owner_name': 'replicaset'}, inplace=True)
 
     def merge_pods_resources_with_replicaset_owner(self):
-        """
-        Merges pod resource data with ReplicaSet owner information.
-
-        This method performs a left join between the `df_final` DataFrame and the 
-        `kube_replicaset_owner` DataFrame on the 'replicaset' column. It combines 
-        the 'owner_kind' and 'replicaset' columns to ensure the resulting DataFrame 
-        has the most complete and accurate information. The merged DataFrame is 
-        then cleaned by dropping redundant columns and stored back in `df_final`.
-        """
-        df_merged = pd.merge(self.df_final, self.kube_replicaset_owner, on='replicaset', how='left')
+        df_merged = pd.merge(self.df_final, self.kube_replicaset_owner, on=['namespace', 'replicaset'], how='left')
 
         df_merged['owner_kind'] = df_merged['owner_kind_y'].combine_first(df_merged['owner_kind_x'])
-
         df_merged['replicaset'] = df_merged['owner_name'].combine_first(df_merged['replicaset'])
 
         self.df_final = df_merged.drop(columns=['owner_kind_x', 'owner_kind_y'])
 
     def remove_not_considered_resources_and_namespaces(self):
-        """
-        Removes rows from the dataframe `df_final` that belong to namespaces or resource kinds 
-        that are not considered for further processing.
-        """
         self.log("[INFO] Removing not considered resources and namespaces.")
         self.df_final = self.df_final[~self.df_final['namespace'].isin(['kube-system', 'monitoring'])]
-
         self.df_final = self.df_final[~self.df_final['owner_kind'].isin(['DaemonSet', 'Job'])]
 
-    def process_and_save_pods_allocation(self):
+    def build_container_usage_df(self):
         """
-        Processes and saves pod allocation data.
+        Builds workload usage dataframe from raw container CPU and memory metrics.
+        CPU is converted from cumulative counter to rate, aggregated pod -> workload.
+        Memory is aggregated as instantaneous usage, pod -> workload.
+        """
+        self.log("[INFO] Building workload usage dataframe from raw container metrics.")
 
-        This method filters and processes pod allocation data from the `df_final` DataFrame,
-        saving the results into two CSV files:
-        1. A list of all unique nodes involved in the allocation.
-        2. A detailed summary of pod allocations grouped by namespace, node, nodepool, replicaset,
-           owner kind, and instance type.
-        """
+        cpu_df = self.container_cpu_usage_seconds_total.copy()
+        cpu_df = cpu_df[
+            cpu_df["pod"].notna() & cpu_df["pod"].ne("") &
+            cpu_df["container"].notna() & cpu_df["container"].ne("")
+        ]
+        cpu_df["value"] = pd.to_numeric(cpu_df["value"], errors="coerce")
+        cpu_df = (
+            cpu_df
+            .groupby(["namespace", "pod", "container", "timestamp"], as_index=False)
+            .agg(value=("value", "max"))
+            .sort_values(["namespace", "pod", "container", "timestamp"])
+        )
+        cpu_df["delta_value"] = cpu_df.groupby(["namespace", "pod", "container"])["value"].diff()
+        cpu_df["delta_time"] = cpu_df.groupby(["namespace", "pod", "container"])["timestamp"].diff()
+        cpu_df["cpu_usage"] = float("nan")
+        valid_cpu = (
+            cpu_df["delta_value"].notna() &
+            cpu_df["delta_time"].notna() &
+            cpu_df["delta_time"].gt(0) &
+            cpu_df["delta_value"].ge(0)
+        )
+        cpu_df.loc[valid_cpu, "cpu_usage"] = (
+            cpu_df.loc[valid_cpu, "delta_value"] / cpu_df.loc[valid_cpu, "delta_time"]
+        )
+        cpu_df = (
+            cpu_df
+            .groupby(["timestamp", "namespace", "pod"], as_index=False)[["cpu_usage"]]
+            .sum(min_count=1)
+        )
+
+        mem_df = self.container_memory_usage_bytes.copy()
+        mem_df = mem_df[
+            mem_df["pod"].notna() & mem_df["pod"].ne("") &
+            mem_df["container"].notna() & mem_df["container"].ne("")
+        ]
+        mem_df["value"] = pd.to_numeric(mem_df["value"], errors="coerce")
+        mem_df = (
+            mem_df
+            .groupby(["namespace", "pod", "container", "timestamp"], as_index=False)
+            .agg(memory_usage=("value", "max"))
+        )
+        mem_df = (
+            mem_df
+            .groupby(["timestamp", "namespace", "pod"], as_index=False)[["memory_usage"]]
+            .sum(min_count=1)
+        )
+
+        usage_df = pd.merge(cpu_df, mem_df, on=["timestamp", "namespace", "pod"], how="outer").sort_values(["namespace", "pod", "timestamp"])
+
+        usage_df = pd.merge(
+            usage_df,
+            self.kube_pod_owner[['namespace', 'pod', 'owner_name']],
+            on=['namespace', 'pod'],
+            how='left'
+        ).rename(columns={'owner_name': 'replicaset'})
+
+        usage_df = pd.merge(
+            usage_df,
+            self.kube_replicaset_owner[['namespace', 'replicaset', 'owner_name']],
+            on=['namespace', 'replicaset'],
+            how='left'
+        )
+
+        usage_df["name"] = usage_df["owner_name"].combine_first(usage_df["replicaset"])
+        usage_df = usage_df.drop(columns=['owner_name'])
+
+        usage_df = usage_df.sort_values(["namespace", "name", "pod", "timestamp"])
+        usage_df[["cpu_usage", "memory_usage"]] = (
+            usage_df
+            .groupby(["namespace", "name", "pod"])[["cpu_usage", "memory_usage"]]
+            .bfill()
+        )
+
+        usage_df = usage_df.dropna(subset=["cpu_usage"], how="all")
+        usage_df = usage_df.dropna(subset=["memory_usage"], how="all")
+
+        self.df_container_usage = usage_df
+        self.log("[INFO] Workload usage dataframe built.")
+
+    def process_hpa_target_metrics(self, spec_target_metric: pd.DataFrame) -> pd.DataFrame:
+        resources = ("cpu", "memory")
+        df = spec_target_metric.loc[spec_target_metric["metric_name"].isin(resources)]
+
+        utilization_mask = df["metric_target_type"].astype(str).str.lower().eq("utilization")
+        df.loc[utilization_mask, "value"] = pd.to_numeric(df.loc[utilization_mask, "value"], errors="coerce").clip(0, 100)
+
+        keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+        values = (
+            df.pivot_table(index=keys, columns="metric_name", values="value", aggfunc="max")
+            .reindex(columns=resources)
+            .reset_index()
+        )
+        types = (
+            df.pivot_table(index=keys, columns="metric_name", values="metric_target_type", aggfunc="first")
+            .reindex(columns=resources)
+            .reset_index()
+            .rename(columns={"cpu": "cpu_type", "memory": "memory_type"})
+        )
+        return values.merge(types, on=keys, how="outer")
+
+    def _build_segments(self, df: pd.DataFrame, id_cols: list, metric_cols: list) -> pd.Series:
+        segment_by_index = {}
+        for _, group in df.groupby(id_cols, sort=False):
+            current_segment = 0
+            previous_metrics = None
+            for row in group.itertuples():
+                current_metrics = tuple(
+                    None if pd.isna(getattr(row, col)) else getattr(row, col)
+                    for col in metric_cols
+                )
+                if previous_metrics is not None and current_metrics != previous_metrics:
+                    current_segment += 1
+                segment_by_index[row.Index] = current_segment
+                previous_metrics = current_metrics
+        return pd.Series(segment_by_index)
+
+    def build_hpa_metrics(self, spec_max_replicas, spec_min_replicas, spec_target_metric_wide):
+        join_keys = ["timestamp", "horizontalpodautoscaler", "namespace"]
+        id_cols = ["namespace", "horizontalpodautoscaler"]
+        metric_cols = ["max_replicas", "min_replicas", "cpu", "memory", "cpu_type", "memory_type"]
+
+        hpa_metrics = (
+            spec_max_replicas.merge(spec_min_replicas, on=join_keys, how="outer")
+            .merge(spec_target_metric_wide, on=join_keys, how="outer")
+        )
+
+        hpa_metrics["_segment"] = self._build_segments(hpa_metrics, id_cols, metric_cols)
+
+        hpa_metrics = (
+            hpa_metrics
+            .groupby(["namespace", "horizontalpodautoscaler", "_segment"] + metric_cols, dropna=False, as_index=False)
+            .agg(timestamp=("timestamp", "min"), last_timestamp=("timestamp", "max"))
+            .drop(columns=["_segment"])
+            .reset_index(drop=True)
+        )
+
+        return hpa_metrics
+
+    def build_hpa_trace(self):
+        self.log("[INFO] Building optional HPA trace.")
+
+        spec_target_metric_wide = self.process_hpa_target_metrics(self.hpa_target_metric)
+        hpa_metrics = self.build_hpa_metrics(
+            self.hpa_spec_max_replicas,
+            self.hpa_spec_min_replicas,
+            spec_target_metric_wide,
+        )
+
+        if hpa_metrics.empty:
+            self.df_hpa_trace = pd.DataFrame(columns=[
+                "timestamp", "horizontalpodautoscaler", "namespace",
+                "max_replicas", "min_replicas", "cpu", "memory",
+                "cpu_type", "memory_type", "action",
+            ])
+            return
+
+        hpa_metrics = hpa_metrics.sort_values(["namespace", "horizontalpodautoscaler", "timestamp"]).reset_index(drop=True)
+
+        apply_action = hpa_metrics.copy()
+        apply_action["action"] = "apply"
+
+        delete_rows = hpa_metrics.groupby(["namespace", "horizontalpodautoscaler"], as_index=False).tail(1).copy()
+        delete_rows["timestamp"] = delete_rows["last_timestamp"].apply(lambda x: min(int(x) + self.step, self.max_timestamp))
+        delete_rows["action"] = "delete"
+
+        self.df_hpa_trace = pd.concat([apply_action, delete_rows], ignore_index=True, sort=False)
+        self.df_hpa_trace = self.df_hpa_trace.sort_values(["timestamp", "namespace", "horizontalpodautoscaler", "action"]).reset_index(drop=True)
+
+    def process_and_save_pods_allocation(self):
         self.log("[INFO] Processing and saving pods allocation.")
         df_pods_allocation = self.df_final[self.df_final['timestamp'] == self.df_final['timestamp'].min()]
 
-        df_pods_allocation = df_pods_allocation[~df_pods_allocation["node"].isin(["unallocated"]) & ~df_pods_allocation["instance_type"].isin(["unallocated"])]
+        df_pods_allocation = df_pods_allocation[
+            ~df_pods_allocation["node"].isin(["unallocated"]) &
+            ~df_pods_allocation["instance_type"].isin(["unallocated"])
+        ]
 
-        all_nodes = df_pods_allocation['node'].unique()
+        node_timestamp_counts = self.df_final.groupby('node')['timestamp'].nunique()
+        valid_nodes = node_timestamp_counts[node_timestamp_counts > 1].index
+        df_pods_allocation = df_pods_allocation[df_pods_allocation['node'].isin(valid_nodes)]
 
-        all_nodes_df = pd.DataFrame(all_nodes, columns=["node"])
-
-        all_nodes_df.to_csv("/tmp/all_nodes.csv", index=False)
-
-        self.df_pods_allocation = df_pods_allocation.groupby(['namespace', 'node', 'nodepool', 'replicaset', 'owner_kind', 'instance_type']).agg(
-            pods_count=('replicaset', 'count'),
-        ).reset_index()
+        self.df_pods_allocation = df_pods_allocation.groupby(
+            ['namespace', 'node', 'nodepool', 'replicaset', 'owner_kind', 'instance_type']
+        ).agg(pods_count=('replicaset', 'count')).reset_index()
 
         self.df_pods_allocation.to_csv("/tmp/pods_allocation.csv", index=False)
 
+    def process_and_save_infrastructure_objects(self):
+        """
+        Identifies node creation and deletion events from df_final based on first/last
+        appearance of each (node, instance_type) pair.
+        """
+        self.log("[INFO] Processing and saving infrastructure objects.")
+
+        infra = self.df_final[['timestamp', 'node', 'instance_type', 'nodepool']].drop_duplicates()
+        infra = infra.sort_values(['node', 'instance_type', 'timestamp'])
+
+        first_idx = infra.groupby(['node', 'instance_type']).head(1).index
+        last_idx = infra.groupby(['node', 'instance_type']).tail(1).index
+
+        infra['action'] = ''
+        infra.loc[first_idx, 'action'] = 'create'
+        infra.loc[last_idx, 'action'] = 'delete'
+
+        infra = infra[infra['action'].isin(['create', 'delete'])]
+
+        counts = infra.groupby(['node', 'instance_type'])['action'].count()
+        valid_nodes = counts[counts > 1].index
+        infra = infra.set_index(['node', 'instance_type']).loc[valid_nodes].reset_index()
+
+        infra = infra[(infra['node'] != 'unallocated') & (infra['instance_type'] != 'unallocated')]
+
+        self.df_infrastructure = infra.sort_values(['timestamp', 'action', 'instance_type', 'node'])
+
     def process_and_save_final_trace(self):
-        """
-        Processes and saves the final trace data by aggregating and transforming the dataframe.
-        The resulting CSV file contains the final trace data with the following columns:
-        - 'timestamp', 'namespace', 'nodepool', 'replicaset', 'owner_kind', 'pods', 'cpu', 'memory', and 'action'.
-        """
         self.log("[INFO] Processing and saving final trace.")
-        df_adjusted = self.df_final.groupby(['timestamp', 'namespace', 'nodepool', 'replicaset', 'owner_kind']).agg(
+
+        # A deployment is a single K8s object — it can only belong to one nodepool.
+        # Resolve conflicts (pods spread across nodepools) by taking the most frequent
+        # nodepool per (namespace, replicaset) before grouping.
+        nodepool_map = (
+            self.df_final
+            .groupby(['namespace', 'replicaset'])['nodepool']
+            .agg(lambda x: x.mode().iloc[0] if not x.empty else 'unallocated')
+            .reset_index(name='resolved_nodepool')
+        )
+        df_resolved = (
+            self.df_final
+            .drop(columns=['nodepool'])
+            .merge(nodepool_map, on=['namespace', 'replicaset'], how='left')
+            .rename(columns={'resolved_nodepool': 'nodepool'})
+        )
+
+        conflicting = (
+            self.df_final.groupby(['namespace', 'replicaset'])['nodepool'].nunique()
+        )
+        conflicting = conflicting[conflicting > 1]
+        if not conflicting.empty:
+            self.log(f"[WARN] Deployments with pods in multiple nodepools (resolved to modal nodepool): {conflicting.index.tolist()}")
+
+        df_adjusted = df_resolved.groupby(['timestamp', 'namespace', 'nodepool', 'replicaset', 'owner_kind']).agg(
             pods_count=('replicaset', 'count'),
-            cpu_count=('cpu', 'mean'),
-            memory_count=('memory', 'mean')
+            cpu_request=('cpu_request', 'mean'),
+            memory_request=('memory_request', 'mean'),
+            cpu_limit=('cpu_limit', 'mean'),
+            memory_limit=('memory_limit', 'mean'),
         ).reset_index()
 
-        df_adjusted = df_adjusted.rename(columns={'pods_count': 'pods', 'cpu_count': 'cpu', 'memory_count': 'memory'})
+        df_adjusted = df_adjusted.rename(columns={'pods_count': 'pods'})
 
-        # This step is to add the action related to the replicaset
         df_adjusted['action'] = 'scale'
-
-        first_occurrences = df_adjusted.groupby(['replicaset','nodepool','namespace']).head(1).index
+        first_occurrences = df_adjusted.groupby(['replicaset', 'nodepool', 'namespace']).head(1).index
         df_adjusted.loc[first_occurrences, 'action'] = 'create'
-
-        last_occurrences = df_adjusted.groupby(['replicaset','nodepool','namespace']).tail(1).index
+        last_occurrences = df_adjusted.groupby(['replicaset', 'nodepool', 'namespace']).tail(1).index
         df_adjusted.loc[last_occurrences, 'action'] = 'delete'
 
-        df_adjusted['pods_changed'] = df_adjusted.groupby('replicaset')['pods'].diff().fillna(1) != 0
+        df_adjusted['pods_changed'] = (
+            df_adjusted.groupby(['namespace', 'nodepool', 'replicaset'])['pods']
+            .diff()
+            .fillna(1) != 0
+        )
 
-        self.df_final = df_adjusted[df_adjusted['pods_changed'] | (df_adjusted['action'].isin(['create', 'delete']))].drop(columns=['pods_changed'])
+        self.df_final = df_adjusted[
+            df_adjusted['pods_changed'] | df_adjusted['action'].isin(['create', 'delete'])
+        ].drop(columns=['pods_changed'])
 
         self.df_final.to_csv('/tmp/final_trace.csv', index=False)
 
+    def merge_applied_objects(self, *objects_maps):
+        merged = {}
+        for objects_map in objects_maps:
+            for namespace, objects in objects_map.items():
+                merged.setdefault(namespace, [])
+                merged[namespace].extend(objects)
+        return merged
+
     def generate_workload_objects(self):
-        """
-        Generates trace objects based on the data in `self.df_final`.
-        Returns:
-            tuple: A tuple containing:
-                - setup (dict): A dictionary with initial setup information, including:
-                    - 'infrastructure' (list): An empty list reserved for node claims.
-                    - 'workload' (list): A list of deployment objects generated for the first timestamp.
-                - json_output (list): A list of dictionaries, each representing a trace entry for a 
-                  specific timestamp. Each dictionary contains:
-                    - "timestamp" (int): The timestamp of the event.
-                    - "applied_objects" (list): A list of objects applied at this timestamp.
-                    - "deleted_objects" (list): A list of objects deleted at this timestamp.
-                    - "scaled_replicasets" (list): A list of scaled replica sets at this timestamp.
-        """
-        workload_objects = {'setup': {}, 'emulation': []}
+        workload_objects = {
+            'setup': {
+                'applied_objects': {},
+                'workload_actions': []
+            },
+            'emulation': []
+        }
 
-        first_timestamp = self.df_final['timestamp'].min()
+        timestamps = sorted(
+            set(self.df_final['timestamp']) |
+            set(self.df_container_usage['timestamp']) |
+            set(self.df_hpa_trace['timestamp'])
+        )
 
-        for timestamp, group in self.df_final.groupby('timestamp'):
+        first_timestamp = min(timestamps)
+
+        for timestamp in timestamps:
+            timestamp = int(timestamp)
+
+            group_final = self.df_final[self.df_final['timestamp'] == timestamp]
+            group_usage = self.df_container_usage[self.df_container_usage['timestamp'] == timestamp]
+            group_hpa = self.df_hpa_trace[self.df_hpa_trace['timestamp'] == timestamp]
+
+            applied_objects = {}
+            deleted_objects = []
+            workload_actions_scale = []
+
+            if not group_final.empty:
+                applied_objects, deleted_objects, workload_actions_scale = \
+                    self.k8s_objects_generator.generate_deployments(group_final)
+
+            applied_hpa_objects = {}
+            deleted_hpa_objects = []
+
+            if not group_hpa.empty:
+                applied_hpa_objects, deleted_hpa_objects = self.k8s_objects_generator.generate_hpa(group_hpa)
+
+            applied_objects = self.merge_applied_objects(applied_objects, applied_hpa_objects)
+            deleted_objects = deleted_objects + deleted_hpa_objects
+
+            workload_actions_usage = []
+            if not group_usage.empty:
+                workload_actions_usage = self.k8s_objects_generator.generate_usage_workload_action(group_usage)
+
+            workload_actions = workload_actions_scale + workload_actions_usage
+
             if timestamp == first_timestamp:
-                workload_objects['setup'], _, _ = self.k8s_objects_generator.generate_deployments(group)
+                workload_objects['setup']['applied_objects'] = applied_objects
+                workload_objects['setup']['workload_actions'] = workload_actions
             else:
-                applied_objects, deleted_objects, scaled_replicasets = self.k8s_objects_generator.generate_deployments(group)
                 workload_objects['emulation'].append({
-                    "timestamp": int(timestamp),
+                    "timestamp": timestamp,
                     "applied_objects": applied_objects,
                     "deleted_objects": deleted_objects,
-                    "scaled_replicasets": scaled_replicasets
+                    "workload_actions": workload_actions,
                 })
 
         return workload_objects
 
     def generate_infrastructure_objects(self):
         """
-        Generates a list of node claims based on unique node and instance type combinations.
-
-        This method processes pod allocation data to identify unique combinations of nodes,
-        node pools, and instance types. It then generates node claims for each unique combination
-        using the Kubernetes objects generator.
+        Generates NodeClaim objects for infrastructure setup and emulation events.
+        Uses df_infrastructure to track create/delete events over time.
         """
+        first_timestamp = self.df_infrastructure['timestamp'].min()
         infrastructure_objects = {'setup': [], 'emulation': []}
-
-        df_unique = self.df_pods_allocation.drop_duplicates(subset=['node', 'instance_type']).reset_index(drop=True)
-        df_unique.to_csv("/tmp/nodeclaims.csv", index=False)
-
-        df_grouped = df_unique.groupby(['node', 'nodepool', 'instance_type'])
 
         with open(self.instance_types_path, encoding="utf-8") as f:
             instance_data = json.load(f)
 
-        for (_, nodepool_name, instance_type), _ in df_grouped:
-            nodeclaim = self.k8s_objects_generator.generate_nodeclaim(instance_type, instance_data, nodepool_name)
-            if nodeclaim:
-                infrastructure_objects['setup'].append(nodeclaim)
+        for timestamp, group in self.df_infrastructure.groupby('timestamp'):
+            applied_objects = []
+            deleted_objects = []
+
+            for _, row in group.iterrows():
+                instance_name = row['node']
+                instance_type = row['instance_type']
+                nodepool_name = row['nodepool']
+                action = row['action']
+
+                if action == 'delete':
+                    deleted_objects.append(instance_name)
+                else:
+                    nodeclaim = self.k8s_objects_generator.generate_nodeclaim(instance_type, instance_data, nodepool_name)
+                    if nodeclaim:
+                        target_list = infrastructure_objects['setup'] if timestamp == first_timestamp else applied_objects
+                        target_list.append(nodeclaim)
+
+            infrastructure_objects['emulation'].append({
+                "timestamp": int(timestamp),
+                "applied_objects": applied_objects,
+                "deleted_objects": deleted_objects,
+            })
 
         return infrastructure_objects
 
-    def process_and_save_output_objects(self):
-        """
-        Processes and saves the output objects generated by the trace emulation.
-        """
+    def process_and_save_workload_and_infrastructure_objects(self):
         self.log("[INFO] Processing and saving output objects.")
         workload_objects = self.generate_workload_objects()
         infrastructure_objects = self.generate_infrastructure_objects()
 
-        workload_objects_json = json.dumps(workload_objects, indent=4)
-        infrastructure_objects_json = json.dumps(infrastructure_objects, indent=4)
-
         with open('/tmp/workload_description.json', 'w', encoding="utf-8") as f:
-            f.write(workload_objects_json)
+            f.write(json.dumps(workload_objects, indent=4))
 
         with open('/tmp/infrastructure_description.json', 'w', encoding="utf-8") as f:
-            f.write(infrastructure_objects_json)
+            f.write(json.dumps(infrastructure_objects, indent=4))
 
     def run(self):
-        """
-        Executes the main workflow of the Tracer class.
-
-        This method orchestrates the entire tracing process by calling the appropriate
-        helper methods in the correct sequence.
-        """
         self.log("[INFO] Starting Tracer.")
         self.load_data()
         self.preprocess_dataframes()
@@ -377,6 +638,9 @@ class TracerKarpenter:
         self.merge_pods_resources_with_pod_owner()
         self.merge_pods_resources_with_replicaset_owner()
         self.remove_not_considered_resources_and_namespaces()
+        self.build_container_usage_df()
+        self.build_hpa_trace()
         self.process_and_save_pods_allocation()
+        self.process_and_save_infrastructure_objects()
         self.process_and_save_final_trace()
-        self.process_and_save_output_objects()
+        self.process_and_save_workload_and_infrastructure_objects()
