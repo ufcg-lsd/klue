@@ -11,6 +11,7 @@ from pods_mapping import PodsMapping
 from collector import Collector
 from workload.manager import WorkloadManager
 from infrastructure.manager import InfrastructureManager
+from infrastructure.service_monitor.service_monitor_manager import ServiceMonitorManager
 import threading
 
 class Manager:
@@ -35,6 +36,7 @@ class Manager:
 
         self.pods_mapping = PodsMapping(karpenter)
         self.collector = Collector(step=30)
+        self.service_monitor_manager = ServiceMonitorManager()
 
     def log(self, message):
         """
@@ -101,6 +103,8 @@ class Manager:
         self.infrastructure_manager.before_setup()
         self.workload_manager.before_setup()
 
+        self.service_monitor_manager.start()
+
         self.log("[INFO] Executing setup of infrastructure and workload.")
         self.infrastructure_manager.setup()
         self.workload_manager.setup()
@@ -150,6 +154,8 @@ class Manager:
         self.stop_collection = True
         collector_thread.join()
         self.log("[INFO] Collector thread stopped.")
+
+        self.service_monitor_manager.stop()
 
         self.log("[INFO] Emulation completed. Tearing down infrastructure, workload and temp files.")
         self.infrastructure_manager.tear_down()
