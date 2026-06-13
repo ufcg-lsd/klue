@@ -16,6 +16,10 @@ class WorkloadManager:
         """
         Initializes the Workload Manager class.
         """
+        self.BEFORE_EMULATION_KINDS = {
+            "horizontalpodautoscaler",
+        }
+
         self.emulation_phase = emulation_phase
         self.hpa = hpa
 
@@ -58,13 +62,17 @@ class WorkloadManager:
 
         workload_actions = setup["workload_actions"]
 
+        target_namespaces = set(applied_objects.keys())
+        pods_before_setup = self.count_pods_in_namespaces(target_namespaces)
+
         self.log(f"[INFO] Deploying setup objects")
         for namespace, objects in applied_objects.items():
             self.create_namespace_if_not_exists(namespace)
             for object in objects:
-                self.k8s_object_applier.apply_object(object)
+                if object.get("kind", "").lower() not in self.BEFORE_EMULATION_KINDS:
+                    self.k8s_object_applier.apply_object(object)
 
-        self.wait_pods_ready()
+        self.wait_pods_ready(pods_before_setup)
 
         self.log(f"[INFO] Applying workload actions on setup")
         for workload_action in workload_actions:
@@ -75,7 +83,16 @@ class WorkloadManager:
                 self.scale_workload(workload_action)
 
     def before_emulation(self):
-        pass
+        setup = self.data["setup"]
+
+        applied_objects = setup["applied_objects"]
+
+        self.log(f"[INFO] Deploying setup HPA objects")
+        for namespace, objects in applied_objects.items():
+            self.create_namespace_if_not_exists(namespace)
+            for object in objects:
+                if object.get("kind", "").lower() in self.BEFORE_EMULATION_KINDS:
+                    self.k8s_object_applier.apply_object(object)
 
     def emulation(self):
         """
@@ -147,7 +164,7 @@ class WorkloadManager:
         self.usage_queue.put("STOP")
         self.usage_manager.join()
 
-    def wait_pods_ready(self):
+    def wait_pods_ready(self, pods_before_setup: int = 0):
         """
         Waits until the number of currently running pods matches the expected number of pods.
 
@@ -171,7 +188,18 @@ class WorkloadManager:
                     self.log(f"[WARNING] Object is not a Deployment or StatefulSet but has replicas={replica_count}. Counting it as workload.")
                     expected_pods += replica_count
 
-        while (current_pods := self.count_pods_excluding_namespaces()) != expected_pods:
+        target_namespaces = set(self.data['setup']['applied_objects'].keys())
+        
+        # Almost 7 pods are created per second, the timeout is derived from expected pod count.
+        deadline = time.monotonic() + int(expected_pods / 7)
+        while True:
+            current_pods = self.count_pods_in_namespaces(target_namespaces) - pods_before_setup
+            if current_pods >= expected_pods:
+                self.log(f"[INFO] All pods created. Current: {current_pods}, Expected: {expected_pods}")
+                break
+            if time.monotonic() >= deadline:
+                self.log(f"[WARNING] Timeout waiting for pods. Current: {current_pods}, Expected: {expected_pods}. Proceeding anyway.")
+                break
             self.log(f"[INFO] Current pods: {current_pods}, Expected: {expected_pods}")
             time.sleep(2)
 
@@ -198,17 +226,14 @@ class WorkloadManager:
         else:
             self.log(f"[INFO] Namespace {namespace} already exists.")
 
-    def count_pods_excluding_namespaces(self):
+    def count_pods_in_namespaces(self, namespaces: set):
         """
-        Counts the number of pods in the cluster, excluding those in specific namespaces.
-
-        This method retrieves all pods across all namespaces in the Kubernetes cluster
-        and filters out pods that belong to the namespaces specified in the 
-        `excluded_namespaces` list. It then returns the total count of the remaining pods.
+        Counts only pods that belong to the given set of namespaces.
+        This avoids mismatches caused by hardcoded exclusion lists that may
+        not align with the namespaces actually used in the setup.
         """
-        excluded_namespaces = ["kube-system", "monitoring"]
         pods = self.k8s_api.list_pod_for_all_namespaces()
-        return sum(1 for pod in pods.items if pod.metadata.namespace not in excluded_namespaces)
+        return sum(1 for pod in pods.items if pod.metadata.namespace in namespaces)
     
     def set_workload_usage(self, usage_info):
         try:
