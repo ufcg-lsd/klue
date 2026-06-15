@@ -11,7 +11,7 @@ import multiprocessing
 from workload.usage.usage_manager import UsageManager
 
 class WorkloadManager:
-    TIME_OUT = 60
+    TIME_OUT = 200
     def __init__(self, data_path, emulation_phase, hpa):
         """
         Initializes the Workload Manager class.

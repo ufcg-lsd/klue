@@ -22,7 +22,7 @@ class UsageManager(multiprocessing.Process):
     - Applies the returned assignment as one ClusterResourceUsage per emulated pod.
     """
 
-    TIME_OUT = 60
+    TIME_OUT = 200
     RECONCILE_INTERVAL_SECONDS = 5
 
     CRU_GROUP = "kwok.x-k8s.io"
