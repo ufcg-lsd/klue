@@ -128,14 +128,13 @@ class PodsMapping:
         for instance_type, real_nodes in real_nodes_dict.items():
 
             if instance_type not in fake_nodes_dict:
-                self.log(f"[ERROR] Instance type {instance_type} not found.")
-                exit()
+                raise RuntimeError(f"[ERROR] Instance type {instance_type} not found.")
 
             fake_nodes = fake_nodes_dict[instance_type].copy()  # 🔥 importante
 
             if len(fake_nodes) < len(real_nodes):
-                self.log(f"[ERROR] Not enough fake nodes for instance type {instance_type}.")
-                exit()
+                raise RuntimeError(f"[ERROR] Not enough fake nodes for instance type {instance_type}.")
+
 
             for real_node in real_nodes:
 
@@ -150,8 +149,7 @@ class PodsMapping:
                         break
 
                 if match_index is None:
-                    self.log(f"[ERROR] No fake node for {real_node}")
-                    exit()
+                    raise RuntimeError(f"[ERROR] No fake node for {real_node}")
 
                 fake_node_name = fake_nodes[match_index][0]
 

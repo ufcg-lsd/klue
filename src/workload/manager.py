@@ -11,7 +11,7 @@ import multiprocessing
 from workload.usage.usage_manager import UsageManager
 
 class WorkloadManager:
-    TIME_OUT = 200
+    TIME_OUT = 60
     def __init__(self, data_path, emulation_phase, hpa):
         """
         Initializes the Workload Manager class.
@@ -162,7 +162,17 @@ class WorkloadManager:
 
     def tear_down(self):
         self.usage_queue.put("STOP")
-        self.usage_manager.join()
+        self.usage_manager.join(timeout=30)
+
+        if self.usage_manager.is_alive():
+            self.log("[WARNING] UsageManager did not stop after 30s. Terminating.")
+            self.usage_manager.terminate()
+            self.usage_manager.join(timeout=30)
+
+        if self.usage_manager.is_alive():
+            self.log("[WARNING] UsageManager did not terminate. Killing.")
+            self.usage_manager.kill()
+            self.usage_manager.join(timeout=30)
 
     def wait_pods_ready(self, pods_before_setup: int = 0):
         """
