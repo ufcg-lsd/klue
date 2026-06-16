@@ -17,7 +17,8 @@ class K8SAPI:
         self.v1 = client.CoreV1Api()
         self.apps_v1 = client.AppsV1Api()
         self.custom_api = client.CustomObjectsApi()
-    
+        self.autoscaling_v2 = client.AutoscalingV2Api()
+
     def log(self, message):
         print(f"[K8SAPI] {message}")
 
@@ -47,6 +48,12 @@ class K8SAPI:
     # Pods
     def list_pod_for_all_namespaces(self, **kwargs):
         return self.v1.list_pod_for_all_namespaces(**kwargs)
+    
+    def list_namespaced_pod(self, namespace, label_selector=None):
+        return self.v1.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=label_selector
+        )
 
     # Deployments
     def read_namespaced_deployment(self, name, namespace, **kwargs):
@@ -71,6 +78,19 @@ class K8SAPI:
     def patch_namespaced_stateful_set_scale(self, name, namespace, body, **kwargs):
         return self.apps_v1.patch_namespaced_stateful_set_scale(name=name, namespace=namespace, body=body, **kwargs)
 
+    # HPA
+    def read_namespaced_horizontal_pod_autoscaler(self, name, namespace, **kwargs):
+        return self.autoscaling_v2.read_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, **kwargs)
+
+    def create_namespaced_horizontal_pod_autoscaler(self, namespace, body, **kwargs):
+        return self.autoscaling_v2.create_namespaced_horizontal_pod_autoscaler(namespace=namespace, body=body, **kwargs)
+
+    def patch_namespaced_horizontal_pod_autoscaler(self, name, namespace, body, **kwargs):
+        return self.autoscaling_v2.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=body, **kwargs)
+
+    def delete_namespaced_horizontal_pod_autoscaler(self, name, namespace, **kwargs):
+        return self.autoscaling_v2.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, **kwargs)
+
     # Custom Objects (Karpenter e outros CRDs)
     def create_cluster_custom_object(self, group, version, plural, body, **kwargs):
         return self.custom_api.create_cluster_custom_object(group=group, version=version, plural=plural, body=body, **kwargs)
@@ -83,6 +103,22 @@ class K8SAPI:
 
     def patch_cluster_custom_object(self, group, version, plural, name, body, **kwargs):
         return self.custom_api.patch_cluster_custom_object(group=group, version=version, plural=plural, name=name, body=body, **kwargs)
+
+    # Custom Objects Namespaced (ServiceMonitor, PrometheusRule, etc.)
+    def create_namespaced_custom_object(self, group, version, namespace, plural, body, **kwargs):
+        return self.custom_api.create_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, body=body, **kwargs)
+
+    def get_namespaced_custom_object(self, group, version, namespace, plural, name, **kwargs):
+        return self.custom_api.get_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, **kwargs)
+
+    def list_namespaced_custom_object(self, group, version, namespace, plural, **kwargs):
+        return self.custom_api.list_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, **kwargs)
+
+    def patch_namespaced_custom_object(self, group, version, namespace, plural, name, body, **kwargs):
+        return self.custom_api.patch_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, body=body, **kwargs)
+
+    def delete_namespaced_custom_object(self, group, version, namespace, plural, name, **kwargs):
+        return self.custom_api.delete_namespaced_custom_object(group=group, version=version, namespace=namespace, plural=plural, name=name, **kwargs)
 
     # Infrastructure creation and deletion
     def create_infrastructure_object(self, body, group=None, version=None, plural=None, **kwargs):
@@ -125,3 +161,6 @@ class K8SAPI:
 
     def delete_infrastructure_object(self, name):
         return self.v1.delete_node(name=name)
+    
+    def delete_cluster_custom_object(self, group, version, plural, name, **kwargs):
+        return self.custom_api.delete_cluster_custom_object(group=group, version=version, plural=plural, name=name, **kwargs)

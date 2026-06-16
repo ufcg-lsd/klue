@@ -1,6 +1,8 @@
 go install github.com/google/ko@latest
 export PATH=$PATH:~/go/bin
+
 source ~/.bashrc
+# source ~/.zshrc
 
 if [ $# -lt 1 ]; then
 	echo "Uso: $0 <karpenter-on/karpenter-off>"
@@ -38,6 +40,61 @@ fi
 
 ./install-kwok.sh
 
-while [[ $(kubectl get pod prometheus-k8s-0 -n monitoring -o jsonpath='{.status.phase}') != "Running" ]]; do
-  sleep 5
+while true; do
+	STATUS=$(kubectl get pod prometheus-k8s-0 -n monitoring \
+		-o jsonpath='{.status.phase}' 2>/dev/null)
+
+	if [[ "$STATUS" == "Running" ]]; then
+		break
+	fi
+
+	echo "Waiting for Prometheus to be available..."
+	sleep 5
 done
+
+echo "Prometheus is running."
+
+# -----------------------------
+# Grafana configuration
+# -----------------------------
+
+echo "▶ Detecting Minikube IP"
+MINIKUBE_IP=$(minikube ip)
+
+if [ -z "$MINIKUBE_IP" ]; then
+  echo "❌ Failed to get Minikube IP"
+  exit 1
+fi
+
+export MINIKUBE_IP
+echo "▶ Minikube IP: $MINIKUBE_IP"
+
+echo "▶ Applying Grafana ConfigMap"
+envsubst < configuration-files/grafana/grafana-configmap.yml | kubectl apply -f -
+
+echo "▶ Applying Grafana NodePort Service"
+kubectl apply -f configuration-files/grafana/grafana-service-nodeport.yml
+
+echo "▶ Restarting Grafana"
+kubectl -n monitoring rollout restart deployment grafana
+
+kubectl -n monitoring wait \
+  --for=condition=available \
+  deployment/grafana \
+  --timeout=180s
+
+echo ""
+echo "✅ Grafana is ready!"
+echo "👉 Open: http://${MINIKUBE_IP}:32000"
+
+# -----------------------------
+# VPA configuration
+# -----------------------------
+
+chmod +x setup-vpa.sh
+
+./setup-vpa.sh # to use vpa, you need to apply an .yaml manifest with VPA configuration, e.g. vpa.yaml
+
+kubectl rollout status deployment/vpa-admission-controller -n kube-system
+kubectl rollout status deployment/vpa-recommender -n kube-system
+kubectl rollout status deployment/vpa-updater -n kube-system

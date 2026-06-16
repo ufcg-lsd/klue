@@ -52,7 +52,9 @@ class InfrastructureManager:
         """
         setup = self.data['setup']
         for infra_obj in setup:
+            node_name = infra_obj["metadata"]["name"]
             self.k8s_object_applier.apply_object(infra_obj)
+            self.log(f"[INFO] Node {node_name} applied.")
 
         while self.input_data_node_count != self.node_count:
             nodes = self.k8s_api.list_node()
@@ -118,7 +120,9 @@ class InfrastructureManager:
             if self.emulation_phase == "dynamic":
                 for node in entry.get('applied_objects', []):
                     try:
+                        node_name = node['metadata']['name']
                         self.k8s_object_applier.apply_node(node, node['metadata']['name'])
+                        self.log(f"[INFO] Node {node_name} applied.")
                     except Exception as e:
                         self.log(f"[ERROR] Failed to apply node {node.get('metadata', {}).get('name', '')}: {e}")
 
