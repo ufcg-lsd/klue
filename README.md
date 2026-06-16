@@ -28,6 +28,13 @@ chmod +x install-dependencies-macos.sh
 ./install-dependencies-macos.sh
 ```
 
+### 📌 Prerequisites
+Before running any command, open the `Makefile` on [Karpenter Code](kwok-karpenter-install/karpenter-code/Makefile) and replace `{YourDockerUserName}` with your Docker Hub username:
+
+```makefile
+export KWOK_REPO ?= docker.io/{YourDockerUserName}
+```
+
 ### 📌 Creating an Cluster
 To create your cluster, and start your journey with our emulation tool, you just need to run:
 ```bash
