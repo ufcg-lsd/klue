@@ -28,7 +28,7 @@ chmod +x install-dependencies-macos.sh
 ./install-dependencies-macos.sh
 ```
 
-### 📌 Prerequisites
+### 📌 Prerequisites when emulating with Karpenter
 Before running any command, open the `Makefile` on [Karpenter Code](kwok-karpenter-install/karpenter-code/Makefile) and replace `{YourDockerUserName}` with your Docker Hub username:
 
 ```makefile
