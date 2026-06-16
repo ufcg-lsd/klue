@@ -198,6 +198,7 @@ kubectl delete no --all
 - **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
 - **Matheus Palmeira Leite Rocha – Undergraduate Student, Federal University of Campina Grande (UFCG)**
 - **Julia da Silva Leal – Undergraduate Student, Federal University of Campina Grande (UFCG)**  
+- **Bruno Grangeiro Bonifácio – Master's Student, Federal University of Campina Grande (UFCG)**
 
 ## 👨‍🏫 Supervised by  
 - **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
