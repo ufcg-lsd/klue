@@ -64,7 +64,7 @@ class DeploymentsGenerator:
                     "deployment": row['replicaset']
                 }
 
-                node_selector = {"kwok.x-k8s.io/node": "true"}
+                node_selector = {"kwok.x-k8s.io/node": "fake" if self.karpenter else "true"}
                 
                 pod_template = {
                     "metadata": {"labels": labels},
@@ -86,15 +86,25 @@ class DeploymentsGenerator:
                     },
                 }
 
-                if pd.notna(row['cpu_request']):
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(row['cpu_request'])
-                if pd.notna(row['memory_request']):
-                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(row['memory_request'])
+                cpu_request = row['cpu_request'] if pd.notna(row['cpu_request']) else None
+                cpu_limit = row['cpu_limit'] if pd.notna(row['cpu_limit']) else None
+                memory_request = row['memory_request'] if pd.notna(row['memory_request']) else None
+                memory_limit = row['memory_limit'] if pd.notna(row['memory_limit']) else None
 
-                if pd.notna(row['cpu_limit']):
-                    pod_template["spec"]["containers"][0]["resources"]["limits"]["cpu"] = self.put_cpu_unity(row['cpu_limit'])
-                if pd.notna(row['memory_limit']):
-                    pod_template["spec"]["containers"][0]["resources"]["limits"]["memory"] = self.put_memory_unity(row['memory_limit'])
+                if cpu_request is not None and cpu_limit is not None:
+                    cpu_request = min(cpu_request, cpu_limit)
+                if memory_request is not None and memory_limit is not None:
+                    memory_request = min(memory_request, memory_limit)
+
+                if cpu_request is not None:
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["cpu"] = self.put_cpu_unity(cpu_request)
+                if memory_request is not None:
+                    pod_template["spec"]["containers"][0]["resources"]["requests"]["memory"] = self.put_memory_unity(memory_request)
+
+                if cpu_limit is not None:
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["cpu"] = self.put_cpu_unity(cpu_limit)
+                if memory_limit is not None:
+                    pod_template["spec"]["containers"][0]["resources"]["limits"]["memory"] = self.put_memory_unity(memory_limit)
 
                 deployment = {
                     "apiVersion": "apps/v1",

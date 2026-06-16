@@ -109,7 +109,7 @@ class NodeClaimGenerator:
                 "annotations": {
                     "karpenter.sh/nodepool-hash": nodepool_info["nodepool_hash"],
                     "karpenter.sh/nodepool-hash-version": nodepool_info["nodepool_hash_version"],
-                    "kwok.x-k8s.io/node": "fake"
+                    "kwok.x-k8s.io/node": "fake",
                 },
                 "creationTimestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "finalizers": [

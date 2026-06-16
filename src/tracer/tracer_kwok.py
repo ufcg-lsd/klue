@@ -796,8 +796,9 @@ class TracerKWOKOnly:
                     deleted_objects.append(instance_name)
                 else:
                     node = self.k8s_objects_generator.generate_node(instance_type, instance_data, instance_name)
-                    target_list = infrastructure_objects['setup'] if timestamp == first_timestamp else applied_objects
-                    target_list.append(node)
+                    if node:
+                        target_list = infrastructure_objects['setup'] if timestamp == first_timestamp else applied_objects
+                        target_list.append(node)
 
             infrastructure_objects['emulation'].append({
                 "timestamp": int(timestamp),

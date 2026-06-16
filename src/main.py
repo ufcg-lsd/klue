@@ -36,10 +36,16 @@ class Main:
         if self.karpenter:
             tracer = TracerKarpenter(
                 os.path.join(self.trace_path, "kube_pod_container_resource_requests.csv"),
+                os.path.join(self.trace_path, "kube_pod_container_resource_limits.csv"),
+                os.path.join(self.trace_path, "container_cpu_usage_seconds_total.csv"),
+                os.path.join(self.trace_path, "container_memory_usage_bytes.csv"),
                 os.path.join(self.trace_path, "karpenter_pods_state.csv"),
                 os.path.join(self.trace_path, "kube_pod_owner.csv"),
                 os.path.join(self.trace_path, "kube_replicaset_owner.csv"),
-                os.path.join(self.trace_path, "instance_types.json")
+                os.path.join(self.trace_path, "instance_types.json"),
+                os.path.join(self.trace_path, "kube_horizontalpodautoscaler_spec_max_replicas.csv"),
+                os.path.join(self.trace_path, "kube_horizontalpodautoscaler_spec_min_replicas.csv"),
+                os.path.join(self.trace_path, "kube_horizontalpodautoscaler_spec_target_metric.csv"),
             )
         else:
             tracer = TracerKWOKOnly(

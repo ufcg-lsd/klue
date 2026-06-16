@@ -122,10 +122,21 @@ class UsageManager(multiprocessing.Process):
             namespace, name = workload_key
 
             emulated_pods_objects = self.list_emulated_pod_objects(namespace, name)
-            emulated_pods = self.list_alive_pod_keys(emulated_pods_objects)
-            if not emulated_pods and not self.deployment_exists(namespace, name):
-                self.cleanup_workload(workload_key)
+            if emulated_pods_objects is None:
+                self.log(f"[WARNING] Skipping reconciliation for {namespace}/{name}. Could not list emulated pods.")
                 continue
+            
+            emulated_pods = self.list_alive_pod_keys(emulated_pods_objects)
+            if not emulated_pods: ## admissible check to avoid unecessary API calls.
+                deployment_status = self.deployment_exists(namespace, name)
+
+                if deployment_status is None:
+                    self.log(f"[WARNING] Skipping cleanup check for {namespace}/{name}. Could not check deployment existence.")
+                    continue
+
+                if deployment_status is False:
+                    self.cleanup_workload(workload_key)
+                    continue
 
             previous_pods = self.last_emulated_pods.get(workload_key)
             if previous_pods == emulated_pods:
@@ -151,11 +162,23 @@ class UsageManager(multiprocessing.Process):
 
         if emulated_pods is None:
             emulated_pods_objects = self.list_emulated_pod_objects(namespace, name)
+            
+            if emulated_pods_objects is None:
+                self.log(f"[WARNING] Skipping reconciliation for {namespace}/{name}. Could not list emulated pods.")
+                return
+            
             emulated_pods = self.list_alive_pod_keys(emulated_pods_objects)
 
-            if not emulated_pods and not self.deployment_exists(namespace, name):
-                self.cleanup_workload(workload_key)
-                return
+            if not emulated_pods: ## admissible check to avoid unecessary API calls.
+                deployment_status = self.deployment_exists(namespace, name)
+
+                if deployment_status is None:
+                    self.log(f"[WARNING] Skipping cleanup check for {namespace}/{name}. Could not check deployment existence.")
+                    return
+
+                if deployment_status is False:
+                    self.cleanup_workload(workload_key)
+                    return
 
         self.last_emulated_pods[workload_key] = emulated_pods
 
@@ -207,12 +230,11 @@ class UsageManager(multiprocessing.Process):
                 memory=memory,
             )
 
-            self.apply_cru(cru_name, body)
-
             self.log(
-                f"[INFO] Applied usage for {pod_namespace}/{pod_name}: "
+                f"[INFO] Applying usage for {pod_namespace}/{pod_name}: "
                 f"cpu={cpu}, memory={memory}"
             )
+            self.apply_cru(cru_name, body)
 
         self.delete_stale_crus(workload_key, desired_crus)
         self.managed_crus_by_workload[workload_key] = desired_crus
@@ -226,23 +248,27 @@ class UsageManager(multiprocessing.Process):
         Create or patch a ClusterResourceUsage object.
         """
 
-        if cru_name in self.existing_crus:
-            self.k8s_api.patch_cluster_custom_object(
-                group=self.CRU_GROUP,
-                version=self.CRU_VERSION,
-                plural=self.CRU_PLURAL,
-                name=cru_name,
-                body=body,
-            )
-        else:
-            self.k8s_api.create_infrastructure_object(
-                body=body,
-                group=self.CRU_GROUP,
-                version=self.CRU_VERSION,
-                plural=self.CRU_PLURAL,
-            )
-            self.existing_crus.add(cru_name)
-    
+        try:
+            if cru_name in self.existing_crus:
+                self.k8s_api.patch_cluster_custom_object(
+                    group=self.CRU_GROUP,
+                    version=self.CRU_VERSION,
+                    plural=self.CRU_PLURAL,
+                    name=cru_name,
+                    body=body,
+                )
+            else:
+                self.k8s_api.create_infrastructure_object(
+                    body=body,
+                    group=self.CRU_GROUP,
+                    version=self.CRU_VERSION,
+                    plural=self.CRU_PLURAL,
+                )
+                self.existing_crus.add(cru_name)
+
+        except Exception as e:
+            self.log(f"[WARNING] Failed to apply usage for CRU {cru_name}: error={e}")
+
     def delete_cru(self, cru_name):
         """
         Delete a ClusterResourceUsage object.
@@ -256,23 +282,31 @@ class UsageManager(multiprocessing.Process):
                 name=cru_name,
             )
             self.log(f"[INFO] Deleted CRU {cru_name}")
-                     
+            self.existing_crus.discard(cru_name)
+
         except ApiException as e:
-            if e.status != 404:
+            if e.status == 404:  # if 404, then CRU already no longer exists
+                self.existing_crus.discard(cru_name)
+            else:
                 self.log(f"[WARNING] Failed to delete CRU {cru_name}: {e}") 
-                return
-        
-        self.existing_crus.discard(cru_name)
+
+
+        except Exception as e:
+            self.log(f"[WARNING] Failed to delete CRU {cru_name}: {e}")
 
     def list_emulated_pod_objects(self, namespace, workload_name):
         """
         Return the exact set of live emulated pods for a workload.
         """
 
-        return self.k8s_api.list_namespaced_pod(
-            namespace=namespace,
-            label_selector=f"deployment={workload_name}",
-        )
+        try:
+            return self.k8s_api.list_namespaced_pod(
+                namespace=namespace,
+                label_selector=f"deployment={workload_name}",
+            )
+        except Exception as e:
+            self.log(f"[WARNING] Failed to list emulated pods for {namespace}/{workload_name}: {e}")
+            return None
 
     def deployment_exists(self, namespace, name):
         try:
@@ -285,8 +319,13 @@ class UsageManager(multiprocessing.Process):
         except ApiException as e:
             if e.status == 404:
                 return False
-            raise
+            
+            self.log(f"[WARNING] Failed to check deployment {namespace}/{name}: status={e.status}, reason={e.reason}")
+            return None
     
+        except Exception as e:
+            self.log(f"[WARNING] Failed to check deployment {namespace}/{name}: error={e}")
+            return None
     # --------------------------------------------------
     # Get emulated pod's useful information
     # --------------------------------------------------
