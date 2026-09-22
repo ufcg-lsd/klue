@@ -28,8 +28,9 @@ class Main:
         This method runs the command `kubectl apply -f <nodepool_path>` to apply the 
         specified node pool configuration to the Kubernetes cluster.
         """
-        
-        subprocess.run(["kubectl", "apply", "-f", self.nodepool_path])
+        if not self.karpenter:
+            return
+        subprocess.run(["kubectl", "apply", "-f", self.nodepool_path], check=True,)
 
     def run_tracer(self):
         tracer = None
