@@ -122,8 +122,34 @@ class TracerKarpenter:
         ])
 
     def select_necessary_columns(self):
-        if "pod" not in self.karpenter_pods_state.columns:
-            self.karpenter_pods_state["pod"] = self.karpenter_pods_state["name...4"]
+        pod_columns = (
+        "pod",
+        "pod_name",
+        "name...4",
+        "name.1",
+        "name",
+    )
+
+        pod_column = next(
+            (
+            column
+            for column in pod_columns
+            if column in self.karpenter_pods_state.columns
+        ),
+            None,
+        )
+
+        if pod_column is None:
+            raise ValueError(
+                "karpenter_pods_state.csv não possui coluna de pod: "
+                f"{list(self.karpenter_pods_state.columns)}"
+            )
+
+        if pod_column != "pod":
+            self.karpenter_pods_state.rename(
+                columns={pod_column: "pod"},
+                inplace=True,
+        )
 
         self.karpenter_pods_state = self.karpenter_pods_state[['timestamp', 'instance_type', 'node', 'pod', 'nodepool', 'phase']]
 
