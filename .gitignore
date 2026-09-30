@@ -23,3 +23,4 @@ venv/
 orchestrator.py
 
 /output_csv_*
+src/custom-k8s-scheduler/pods_and_nodes_map.csv
