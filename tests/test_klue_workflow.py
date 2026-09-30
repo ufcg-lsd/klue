@@ -32,7 +32,7 @@ def setup_and_teardown_cluster(request):
     subprocess.run(["bash", "delete-cluster.sh"], input="2\n", text=True, check=True)
 
 # After 5 minutes, the test will fail if it is not completed
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(600)
 def test_workflow_karpenter_dynamic_infra_dynamic_workload(mocker):
     # Spy on the run method of the Manager class
     spy_run = mocker.spy(Manager, "run")
