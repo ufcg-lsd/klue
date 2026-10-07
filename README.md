@@ -199,8 +199,6 @@ kubectl delete no --all
 - **Matheus Palmeira Leite Rocha – Undergraduate Student, Federal University of Campina Grande (UFCG)**
 - **Julia da Silva Leal – Undergraduate Student, Federal University of Campina Grande (UFCG)**  
 - **Bruno Grangeiro Bonifácio – Master's Student, Federal University of Campina Grande (UFCG)**
-
-## 👨‍🏫 Supervised by  
-- **Giovanni Farias – PhD, Federal University of Campina Grande (UFCG)**  
-- **Fábio Morais – PhD, Federal University of Campina Grande (UFCG)**  
-- **Thiago Emmanuel – PhD, Federal University of Campina Grande (UFCG)**  
+- **Giovanni Farias – Federal University of Campina Grande (UFCG)**  
+- **Fábio Morais – Federal University of Campina Grande (UFCG)**  
+- **Thiago Emmanuel Pereira – Federal University of Campina Grande (UFCG)**  
