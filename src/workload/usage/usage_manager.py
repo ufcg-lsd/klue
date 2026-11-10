@@ -215,8 +215,9 @@ class UsageManager(multiprocessing.Process):
         for pod_key, usage in assignment.items():
             pod_namespace, pod_name = pod_key
 
-            cpu = str(usage.get("cpu"))
-            memory = f'Quantity("{int(round(usage.get("memory")))}")' 
+            # Static quantities avoid compiling a new CEL expression per sample.
+            cpu = f'{int(round(usage.get("cpu") * 1_000_000))}u'
+            memory = str(int(round(usage.get("memory"))))
             cru_name = f"usage-{pod_namespace}-{pod_name}"
             
             desired_crus.add(cru_name)
