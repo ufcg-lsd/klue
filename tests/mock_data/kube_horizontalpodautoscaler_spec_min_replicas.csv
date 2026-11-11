@@ -1,0 +1,5 @@
+timestamp,value,horizontalpodautoscaler,namespace
+0,1,default,default
+5,1,default,default
+10,1,default,default
+15,1,default,default

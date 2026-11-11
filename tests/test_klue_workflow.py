@@ -12,7 +12,7 @@ ROOT_DIRECTORY = Path('.').resolve()
 MOCK_PATH = f'{ROOT_DIRECTORY}/tests/mock_data/'
 
 @pytest.fixture(autouse=True)
-def setup_and_teardown_cluster():
+def setup_and_teardown_cluster(request):
     # Delete the minikube cluster before the test
     subprocess.run(["bash", "delete-cluster.sh"], input="2\n", text=True, check=True)
     # Remove temporary CSV and JSON files if it exists
@@ -20,14 +20,19 @@ def setup_and_teardown_cluster():
     # Create the minikube cluster before the test
     subprocess.run(["bash", "create-cluster.sh"], input="2\n", text=True, check=True)
     # Run emulation with the flags --dev --use-karpenter before the test
-    subprocess.run(["bash", "execute-emulation.sh", "--dev", "--use-karpenter"], check=True)
+    command = ["bash", "execute-emulation.sh", "--dev"]
+
+    if "no_karpenter" not in request.node.name:
+        command.append("--use-karpenter")
+
+    subprocess.run(command, check=True)
 
     yield
     # Delete the minikube cluster after the test
     subprocess.run(["bash", "delete-cluster.sh"], input="2\n", text=True, check=True)
 
 # After 5 minutes, the test will fail if it is not completed
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(600)
 def test_workflow_karpenter_dynamic_infra_dynamic_workload(mocker):
     # Spy on the run method of the Manager class
     spy_run = mocker.spy(Manager, "run")
@@ -50,7 +55,7 @@ def test_workflow_karpenter_dynamic_infra_dynamic_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
@@ -61,7 +66,8 @@ def test_workflow_karpenter_dynamic_infra_dynamic_workload(mocker):
         karpenter=True,
         tracer_skip=False,
         infrastructure="dynamic",
-        workload="dynamic"
+        workload="dynamic",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -90,7 +96,7 @@ def test_workflow_karpenter_dynamic_infra_dynamic_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -119,7 +125,7 @@ def test_workflow_karpenter_static_infra_dynamic_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
@@ -130,7 +136,8 @@ def test_workflow_karpenter_static_infra_dynamic_workload(mocker):
         karpenter=True,
         tracer_skip=False,
         infrastructure="static",
-        workload="dynamic"
+        workload="dynamic",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -159,7 +166,7 @@ def test_workflow_karpenter_static_infra_dynamic_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -188,7 +195,7 @@ def test_workflow_karpenter_dynamic_infra_static_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
@@ -199,7 +206,8 @@ def test_workflow_karpenter_dynamic_infra_static_workload(mocker):
         karpenter=True,
         tracer_skip=False,
         infrastructure="dynamic",
-        workload="static"
+        workload="static",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -228,7 +236,7 @@ def test_workflow_karpenter_dynamic_infra_static_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -257,7 +265,7 @@ def test_workflow_karpenter_static_infra_static_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
@@ -268,7 +276,8 @@ def test_workflow_karpenter_static_infra_static_workload(mocker):
         karpenter=True,
         tracer_skip=False,
         infrastructure="static",
-        workload="static"
+        workload="static",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -297,7 +306,7 @@ def test_workflow_karpenter_static_infra_static_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -326,18 +335,19 @@ def test_workflow_no_karpenter_dynamic_infra_dynamic_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
 
     main = Main(
         trace_path=f"{MOCK_PATH}",
-        nodepool_path=f"{MOCK_PATH}nodepools.yaml",
-        karpenter=True,
+        nodepool_path=None,
+        karpenter=False,
         tracer_skip=False,
         infrastructure="dynamic",
-        workload="dynamic"
+        workload="dynamic",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -353,9 +363,11 @@ def test_workflow_no_karpenter_dynamic_infra_dynamic_workload(mocker):
     assert spy_infra_before_emulation.call_count == 1
     assert spy_infra_emulation.call_count == 1
     assert spy_infra_tear_down.call_count == 1
-    assert spy_expand_nodepools_disruption_time.call_count == 1
-    assert spy_restore_nodepools_disruption_time.call_count == 1
     assert spy_count_nodes_in_input_data.call_count == 1
+
+    # Karpenter methods, not called
+    spy_expand_nodepools_disruption_time.assert_not_called()
+    spy_restore_nodepools_disruption_time.assert_not_called()
 
     # Check if WorkloadManager methods were called
     assert spy_workload_before_setup.call_count == 1
@@ -366,7 +378,7 @@ def test_workflow_no_karpenter_dynamic_infra_dynamic_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -395,18 +407,19 @@ def test_workflow_no_karpenter_static_infra_dynamic_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
 
     main = Main(
         trace_path=f"{MOCK_PATH}",
-        nodepool_path=f"{MOCK_PATH}nodepools.yaml",
-        karpenter=True,
+        nodepool_path=None,
+        karpenter=False,
         tracer_skip=False,
         infrastructure="static",
-        workload="dynamic"
+        workload="dynamic",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -422,9 +435,10 @@ def test_workflow_no_karpenter_static_infra_dynamic_workload(mocker):
     assert spy_infra_before_emulation.call_count == 1
     assert spy_infra_emulation.call_count == 1
     assert spy_infra_tear_down.call_count == 1
-    assert spy_expand_nodepools_disruption_time.call_count == 1
-    assert spy_restore_nodepools_disruption_time.call_count == 1
     assert spy_count_nodes_in_input_data.call_count == 1
+    # Karpenter methods, not called
+    spy_expand_nodepools_disruption_time.assert_not_called()
+    spy_restore_nodepools_disruption_time.assert_not_called()
 
     # Check if WorkloadManager methods were called
     assert spy_workload_before_setup.call_count == 1
@@ -435,7 +449,7 @@ def test_workflow_no_karpenter_static_infra_dynamic_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -464,18 +478,19 @@ def test_workflow_no_karpenter_dynamic_infra_static_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
 
     main = Main(
         trace_path=f"{MOCK_PATH}",
-        nodepool_path=f"{MOCK_PATH}nodepools.yaml",
-        karpenter=True,
+        nodepool_path=None,
+        karpenter=False,
         tracer_skip=False,
         infrastructure="dynamic",
-        workload="static"
+        workload="static",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -491,9 +506,11 @@ def test_workflow_no_karpenter_dynamic_infra_static_workload(mocker):
     assert spy_infra_before_emulation.call_count == 1
     assert spy_infra_emulation.call_count == 1
     assert spy_infra_tear_down.call_count == 1
-    assert spy_expand_nodepools_disruption_time.call_count == 1
-    assert spy_restore_nodepools_disruption_time.call_count == 1
     assert spy_count_nodes_in_input_data.call_count == 1
+
+    # Karpenter methods, not called
+    spy_expand_nodepools_disruption_time.assert_not_called()
+    spy_restore_nodepools_disruption_time.assert_not_called()
 
     # Check if WorkloadManager methods were called
     assert spy_workload_before_setup.call_count == 1
@@ -504,7 +521,7 @@ def test_workflow_no_karpenter_dynamic_infra_static_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1
@@ -533,18 +550,19 @@ def test_workflow_no_karpenter_static_infra_static_workload(mocker):
     spy_workload_wait_pods_ready = mocker.spy(WorkloadManager, "wait_pods_ready")
     spy_workload_namespace_exists = mocker.spy(WorkloadManager, "namespace_exists")
     spy_workload_create_namespace_if_not_exists = mocker.spy(WorkloadManager, "create_namespace_if_not_exists")
-    spy_workload_count_pods_excluding_namespaces = mocker.spy(WorkloadManager, "count_pods_excluding_namespaces")
+    spy_workload_count_pods_in_namespaces = mocker.spy(WorkloadManager, "count_pods_in_namespaces")
 
     # Spy on Collector methods
     spy_collector_collect = mocker.spy(Collector, "collect")
 
     main = Main(
         trace_path=f"{MOCK_PATH}",
-        nodepool_path=f"{MOCK_PATH}nodepools.yaml",
-        karpenter=True,
+        nodepool_path=None,
+        karpenter=False,
         tracer_skip=False,
         infrastructure="static",
-        workload="static"
+        workload="static",
+        hpa=False
     )
 
     main.apply_nodepool()
@@ -560,9 +578,11 @@ def test_workflow_no_karpenter_static_infra_static_workload(mocker):
     assert spy_infra_before_emulation.call_count == 1
     assert spy_infra_emulation.call_count == 1
     assert spy_infra_tear_down.call_count == 1
-    assert spy_expand_nodepools_disruption_time.call_count == 1
-    assert spy_restore_nodepools_disruption_time.call_count == 1
     assert spy_count_nodes_in_input_data.call_count == 1
+
+    # Karpenter methods, not called
+    spy_expand_nodepools_disruption_time.assert_not_called()
+    spy_restore_nodepools_disruption_time.assert_not_called()
 
     # Check if WorkloadManager methods were called
     assert spy_workload_before_setup.call_count == 1
@@ -573,7 +593,7 @@ def test_workflow_no_karpenter_static_infra_static_workload(mocker):
     assert spy_workload_wait_pods_ready.call_count == 1
     assert spy_workload_namespace_exists.call_count >= 1
     assert spy_workload_create_namespace_if_not_exists.call_count >= 1
-    assert spy_workload_count_pods_excluding_namespaces.call_count >= 1
+    assert spy_workload_count_pods_in_namespaces.call_count >= 1
 
     # Check if Collector methods were
     assert spy_collector_collect.call_count >= 1

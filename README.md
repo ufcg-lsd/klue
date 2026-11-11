@@ -194,10 +194,11 @@ kubectl delete no --all
 
 ---
 ## 👥 Team
-- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/kayky-fidelis/)  
-- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)** – [LinkedIn](https://www.linkedin.com/in/geraldo-sobreira-junior/)  
+- **Kayky Fidelis – Undergraduate Student, Federal University of Campina Grande (UFCG)**
+- **Geraldo Sobreira – Undergraduate Student, Federal University of Campina Grande (UFCG)**
 - **Matheus Palmeira Leite Rocha – Undergraduate Student, Federal University of Campina Grande (UFCG)**
 - **Julia da Silva Leal – Undergraduate Student, Federal University of Campina Grande (UFCG)**  
+- **Anthony Willy Miranda Pereira – Undergraduate's Student, Federal University of Campina Grande (UFCG)**
 - **Bruno Grangeiro Bonifácio – Master's Student, Federal University of Campina Grande (UFCG)**
 - **Giovanni Farias – Federal University of Campina Grande (UFCG)**  
 - **Fábio Morais – Federal University of Campina Grande (UFCG)**  

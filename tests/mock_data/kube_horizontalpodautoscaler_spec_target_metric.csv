@@ -1,0 +1,5 @@
+timestamp,value,metric_name,horizontalpodautoscaler,namespace,metric_target_type
+0,80,cpu,default,default,utilization
+5,80,cpu,default,default,utilization
+10,80,cpu,default,default,utilization
+15,80,cpu,default,default,utilization
