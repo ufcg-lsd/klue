@@ -11,7 +11,7 @@ analysis
 
 vtex-collector
 
-data/*.csv
+data/*
 
 src/custom-k8s-scheduler/custom-scheduler
 

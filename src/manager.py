@@ -92,6 +92,9 @@ class Manager:
 
             current = end_time + safety_offset
 
+        # Archive once, after the last collection, instead of on every cycle.
+        self.collector.archive(output_dir)
+
     def run(self):
         """
         Executes the main workflow of the Broker.

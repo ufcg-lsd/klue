@@ -135,16 +135,17 @@ class Collector:
 
     def collect(self, start_time, end_time, output_dir):
         """
-        Collects metrics for a specified duration, writes them to CSV files, 
-        and compresses the files into a ZIP archive.
+        Collects metrics for a specified duration and appends them to CSV files.
 
         Steps:
             1. Logs the start of the metric collection process.
             2. Reads the metrics and stores them.
             3. Creates a timestamped output directory for the CSV files.
             4. Writes the collected metrics to CSV files in the output directory.
-            5. Compresses the CSV files into a ZIP archive.
-            6. Logs the completion of the zipping process.
+
+        The CSV files are not archived here: call `archive()` once, after the
+        last collection, so the dataset is compressed a single time instead of
+        being re-zipped on every cycle.
         """
         self.log(f"[INFO] Collecting metrics from {start_time} to {end_time}")
         self.metrics = self.read_metrics()
@@ -152,9 +153,23 @@ class Collector:
         os.makedirs(output_dir, exist_ok=True)
         self.write_csv(output_dir, start_time, end_time)
 
-        # Zip the CSV files
-        with zipfile.ZipFile(f"{output_dir}.zip", "w") as zip:
-            for file in glob.glob(f"{output_dir}/*.csv"):
-                zip.write(file)
+    def archive(self, output_dir):
+        """
+        Compresses the CSV files in `output_dir` into `<output_dir>.zip`.
+
+        Meant to run once, after the last collection. Prometheus exports are
+        highly repetitive (pod and namespace strings repeat on every row), so
+        DEFLATE shrinks them several times over; the default ZIP_STORED would
+        not compress at all.
+        """
+        csv_files = sorted(glob.glob(f"{output_dir}/*.csv"))
+        if not csv_files:
+            self.log(f"[INFO] No CSV files in {output_dir}; skipping archive.")
+            return
+
+        with zipfile.ZipFile(f"{output_dir}.zip", "w",
+                             compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            for file in csv_files:
+                zf.write(file, arcname=os.path.basename(file))
 
         self.log(f"[INFO] CSV files zipped to {output_dir}.zip")

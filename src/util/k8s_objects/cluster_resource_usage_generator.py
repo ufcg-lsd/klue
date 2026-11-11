@@ -13,7 +13,7 @@ class ClusterResourceUsageGenerator:
         memory,
     ):
         """
-        Generate a ClusterResourceUsage scoped to exactly one pod.
+        Generate a ClusterResourceUsage with static quantities for exactly one pod.
         """
 
         return {
@@ -32,10 +32,10 @@ class ClusterResourceUsageGenerator:
                         "containers": [container],
                         "usage": {
                             "cpu": {
-                                "expression": cpu,
+                                "value": cpu,
                             },
                             "memory": {
-                                "expression": memory,
+                                "value": memory,
                             },
                         },
                     }
