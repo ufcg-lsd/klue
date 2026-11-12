@@ -6,6 +6,7 @@ KWOK fake node.
 
 import threading
 from kubernetes import watch
+from kubernetes.client.rest import ApiException
 from util.k8s_api.k8s_api import K8SAPI
 from util.k8s_object_applier import KubernetesObjectApplier
 from util.k8s_objects.servicemonitor_generator import ServiceMonitorGenerator
@@ -51,18 +52,28 @@ class ServiceMonitorManager:
         Opens a Kubernetes watch on nodes. For each ADDED or DELETED event
         on a KWOK fake node, creates or deletes the ServiceMonitor.
         Reconnects automatically if the watch stream closes, resuming from
-        the last seen resourceVersion to avoid replaying existing nodes.
+        the last seen resourceVersion. If that version expires, relists nodes
+        and reconciles ServiceMonitors before opening a fresh watch.
         """
-        # List existing nodes once on startup to get the current resourceVersion.
-        node_list = self.k8s_api.v1.list_node()
-        resource_version = node_list.metadata.resource_version
-        for node in node_list.items:
-            if self._is_fake_node(node):
-                self._on_node_added(node.metadata.name)
-
+        resource_version = None
+        known_nodes = set()
         w = watch.Watch()
         while not self._stop_event.is_set():
             try:
+                if resource_version is None:
+                    node_list = self.k8s_api.v1.list_node()
+                    current_nodes = {
+                        node.metadata.name for node in node_list.items
+                        if self._is_fake_node(node)
+                    }
+                    for node_name in current_nodes:
+                        self._on_node_added(node_name)
+                    for node_name in known_nodes - current_nodes:
+                        self._on_node_deleted(node_name)
+                    known_nodes = current_nodes
+                    # Use the collection version to resume after this snapshot.
+                    resource_version = node_list.metadata.resource_version
+
                 for event in w.stream(
                     self.k8s_api.v1.list_node,
                     timeout_seconds=60,
@@ -81,13 +92,20 @@ class ServiceMonitorManager:
                     node_name = node.metadata.name
 
                     if event_type == "ADDED":
+                        known_nodes.add(node_name)
                         self._on_node_added(node_name)
                     elif event_type == "DELETED":
+                        known_nodes.discard(node_name)
                         self._on_node_deleted(node_name)
 
             except Exception as e:
                 if not self._stop_event.is_set():
-                    self.log(f"[WARNING] Watch error, reconnecting: {e}")
+                    if isinstance(e, ApiException) and e.status == 410:
+                        resource_version = None
+                        self.log("[WARNING] Watch resourceVersion expired, relisting nodes.")
+                    else:
+                        self.log(f"[WARNING] Watch error, reconnecting: {e}")
+                    self._stop_event.wait(1)
 
     # ------------------------------------------------------------------
     # Event handlers
